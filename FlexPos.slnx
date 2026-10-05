@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/FlexPos.Api/FlexPos.Api.csproj" />
+  <Project Path="src/FlexPos.Application/FlexPos.Application.csproj" />
+  <Project Path="src/FlexPos.Domain/FlexPos.Domain.csproj" />
+  <Project Path="src/FlexPos.Infrastructure/FlexPos.Infrastructure.csproj" />
+  <Project Path="tests/FlexPos.Tests/FlexPos.Tests.csproj" />
+</Solution>

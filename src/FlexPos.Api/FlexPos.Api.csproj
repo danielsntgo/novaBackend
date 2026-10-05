@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>flexpos-api-development</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\FlexPos.Application\FlexPos.Application.csproj" />
+        <ProjectReference Include="..\FlexPos.Infrastructure\FlexPos.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>
