@@ -19,9 +19,13 @@ RUN dotnet publish "src/FlexPos.Api/FlexPos.Api.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV ASPNETCORE_ENVIRONMENT=Production
-EXPOSE 8080
+EXPOSE 10000
 
 COPY --from=build /app/publish .
 
-CMD ["sh", "-c", "dotnet FlexPos.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]
+CMD ["sh", "-c", "dotnet FlexPos.Api.dll --urls http://0.0.0.0:${PORT:-10000}"]
