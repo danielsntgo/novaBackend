@@ -8542,6 +8542,7 @@
           "servicioId",
           "empleadoId",
           "codigo",
+          "manejaFraccion",
           "nombre",
           "unidad",
           "cantidad",
@@ -8590,6 +8591,9 @@
               "null",
               "string"
             ]
+          },
+          "manejaFraccion": {
+            "type": "boolean"
           },
           "nombre": {
             "type": "string"
@@ -10836,6 +10840,7 @@
           "totalReintegrado",
           "totalPendiente",
           "motivoAnulacion",
+          "fechaAnulacionUtc",
           "lineas",
           "pagos",
           "documentos",
@@ -10973,6 +10978,13 @@
               "null",
               "string"
             ]
+          },
+          "fechaAnulacionUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           },
           "lineas": {
             "type": "array",

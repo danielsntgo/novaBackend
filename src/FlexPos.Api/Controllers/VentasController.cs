@@ -155,11 +155,13 @@ public sealed class VentasController(ServicioVentas servicio, ServicioCatalogoVe
         {
             "venta.no_encontrada" or "venta.documento_no_encontrado" =>
                 StatusCodes.Status404NotFound,
+            "venta.importe_reintegro_invalido" => StatusCodes.Status400BadRequest,
             "venta.conflicto" or "caja.no_abierta" or "venta.cliente_inactivo" or
                 "venta.producto_inactivo" or "venta.servicio_inactivo" or "venta.empleado_inactivo" or
                 "venta.impuesto_inactivo" or "venta.metodo_pago_inactivo" or
                 "venta.facturacion_deshabilitada" or "venta.saldo_pendiente_deshabilitado" or
-                "venta.cantidad_devolucion_invalida" or "cuenta_financiera.saldo_insuficiente" =>
+                "venta.cantidad_devolucion_invalida" or
+                "cuenta_financiera.saldo_insuficiente" =>
                 StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) =>
                 StatusCodes.Status409Conflict,

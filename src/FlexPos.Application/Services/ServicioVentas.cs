@@ -609,11 +609,18 @@ public sealed class ServicioVentas(
             var cantidadYaDevuelta = cantidadesDevueltas.GetValueOrDefault(linea.Id);
             var importeYaDevuelto = importesDevueltos.GetValueOrDefault(linea.Id);
             var cantidadRestante = linea.Cantidad - cantidadYaDevuelta;
-            if (solicitudLinea.Cantidad > cantidadRestante ||
-                linea.Tipo == TipoLineaVenta.Servicio && decimal.Truncate(solicitudLinea.Cantidad) != solicitudLinea.Cantidad)
+            if (solicitudLinea.Cantidad > cantidadRestante)
             {
                 return Resultado<VentaDto>.Fallo(new ErrorDominio(
-                    "venta.cantidad_devolucion_invalida", "La cantidad supera las unidades aún disponibles para devolver."));
+                    "venta.cantidad_devolucion_invalida",
+                    "La cantidad supera las unidades aún disponibles para devolver."));
+            }
+
+            if ((linea.Tipo == TipoLineaVenta.Servicio || !linea.ManejaFraccion) &&
+                decimal.Truncate(solicitudLinea.Cantidad) != solicitudLinea.Cantidad)
+            {
+                return Resultado<VentaDto>.Fallo(new ErrorDominio(
+                    "venta.cantidad_fraccion_invalida", "La cantidad de esta línea debe ser un número entero."));
             }
 
             var importeRestante = linea.TotalImporte - importeYaDevuelto;
@@ -643,6 +650,13 @@ public sealed class ServicioVentas(
         if (!pagos.EsExitoso)
         {
             return Resultado<VentaDto>.Fallo(pagos.Error!);
+        }
+
+        if (pagos.Valor!.Sum(x => x.Importe) != reembolsoEsperado)
+        {
+            return Resultado<VentaDto>.Fallo(new ErrorDominio(
+                "venta.importe_reintegro_invalido",
+                $"El importe del reintegro debe ser exactamente {reembolsoEsperado:0.00}."));
         }
 
         var devolucionCreada = DevolucionVenta.Crear(
@@ -961,9 +975,10 @@ public sealed class ServicioVentas(
         venta.TotalReintegrado,
         venta.TotalPendiente,
         venta.MotivoAnulacion,
+        venta.FechaAnulacionUtc,
         venta.Detalles.Select(x => new LineaVentaDto(
             x.Id, x.Tipo.ToString(), x.ArticuloInventarioId, x.ServicioId, x.EmpleadoId, x.Codigo,
-            x.Nombre, x.Unidad, x.Cantidad, x.PrecioUnitario, x.TipoDescuentoLinea?.ToString(),
+            x.ManejaFraccion, x.Nombre, x.Unidad, x.Cantidad, x.PrecioUnitario, x.TipoDescuentoLinea?.ToString(),
             x.ValorDescuento, x.DescuentoImporte, x.DescuentoGeneralImporte, x.ImpuestoNombre,
             x.ImpuestoPorcentaje, x.ImpuestoImporte, x.TotalImporte)).ToArray(),
         venta.Pagos.OrderBy(x => x.FechaCreacionUtc).Select(x => new PagoVentaDto(

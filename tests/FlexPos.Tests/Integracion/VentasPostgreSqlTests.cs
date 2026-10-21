@@ -218,6 +218,17 @@ public sealed class VentasPostgreSqlTests
         Assert.Equal(0m, ventaPagada.TotalPendiente);
 
         var idLinea = venta.Lineas.Single().Id;
+        using var devolucionUnidadIncompleta = CrearSolicitud(
+            HttpMethod.Post, $"/api/ventas/{venta.Id}/devoluciones", sesion.TokenAcceso,
+            new
+            {
+                motivo = "Prueba de unidad indivisible",
+                lineas = new[] { new { detalleVentaId = idLinea, cantidad = 0.5m } },
+                pagos = (object[]?)null
+            });
+        using var respuestaUnidadIncompleta = await cliente.SendAsync(devolucionUnidadIncompleta);
+        Assert.Equal(HttpStatusCode.BadRequest, respuestaUnidadIncompleta.StatusCode);
+
         using var reembolsoSinSaldo = CrearSolicitud(
             HttpMethod.Post, $"/api/ventas/{venta.Id}/devoluciones", sesion.TokenAcceso,
             new

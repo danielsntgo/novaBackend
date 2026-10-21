@@ -14,6 +14,7 @@ public sealed class DetalleVenta
         Guid? servicioId,
         Guid? empleadoId,
         TipoLineaVenta tipo,
+        bool manejaFraccion,
         string? codigo,
         string nombre,
         string unidad,
@@ -30,6 +31,7 @@ public sealed class DetalleVenta
         ServicioId = servicioId;
         EmpleadoId = empleadoId;
         Tipo = tipo;
+        ManejaFraccion = tipo == TipoLineaVenta.Producto && manejaFraccion;
         Codigo = Limpiar(codigo);
         Nombre = nombre.Trim();
         Unidad = unidad.Trim();
@@ -56,6 +58,7 @@ public sealed class DetalleVenta
     public Guid? ServicioId { get; private set; }
     public Guid? EmpleadoId { get; private set; }
     public TipoLineaVenta Tipo { get; private set; }
+    public bool ManejaFraccion { get; private set; }
     public string? Codigo { get; private set; }
     public string Nombre { get; private set; } = string.Empty;
     public string Unidad { get; private set; } = string.Empty;
@@ -126,7 +129,7 @@ public sealed class DetalleVenta
         try
         {
             var detalle = new DetalleVenta(
-                articuloInventarioId, servicioId, empleadoId, tipo, codigo, nombre, unidad,
+                articuloInventarioId, servicioId, empleadoId, tipo, manejaFraccion, codigo, nombre, unidad,
                 cantidad, precioUnitario, costoInventarioUnitario, tipoDescuento, valorDescuento,
                 impuestoNombre, impuestoPorcentaje);
             if (detalle.DescuentoImporte > detalle.ImporteBruto)

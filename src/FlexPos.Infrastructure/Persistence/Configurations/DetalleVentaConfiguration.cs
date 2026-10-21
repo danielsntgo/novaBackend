@@ -16,6 +16,7 @@ public sealed class DetalleVentaConfiguration : IEntityTypeConfiguration<Detalle
         builder.Property(x => x.ServicioId).HasColumnName("servicio_id");
         builder.Property(x => x.EmpleadoId).HasColumnName("empleado_id");
         builder.Property(x => x.Tipo).HasColumnName("tipo").HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.ManejaFraccion).HasColumnName("maneja_fraccion");
         builder.Property(x => x.Codigo).HasColumnName("codigo").HasMaxLength(50);
         builder.Property(x => x.Nombre).HasColumnName("nombre").HasMaxLength(150).IsRequired();
         builder.Property(x => x.Unidad).HasColumnName("unidad").HasMaxLength(30).IsRequired();

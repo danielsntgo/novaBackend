@@ -998,6 +998,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(5,2)")
                         .HasColumnName("impuesto_porcentaje");
 
+                    b.Property<bool>("ManejaFraccion")
+                        .HasColumnType("boolean")
+                        .HasColumnName("maneja_fraccion");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
