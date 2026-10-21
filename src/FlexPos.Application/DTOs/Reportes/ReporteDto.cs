@@ -27,6 +27,7 @@ public sealed record FiltrosReporte(
     Guid? ProveedorId = null,
     Guid? MetodoPagoId = null,
     string? Estado = null,
-    int Limite = 5000);
+    int Limite = 5000,
+    Guid? CuentaFinancieraId = null);
 
 public sealed record ArchivoReporte(byte[] Contenido, string Nombre, string TipoContenido);

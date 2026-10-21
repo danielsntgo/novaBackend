@@ -61,10 +61,13 @@ public sealed partial class RepositorioReportes
         var cajas = await consulta.OrderByDescending(x => x.FechaAperturaUtc)
             .ThenByDescending(x => x.Id).Take(filtros.Limite + 1).ToArrayAsync(cancellationToken);
         var ids = cajas.Take(filtros.Limite).Select(x => x.Id).ToArray();
-        var movimientos = await contexto.MovimientosCaja.AsNoTracking()
-            .Where(x => ids.Contains(x.CajaId))
-            .GroupBy(x => new { x.CajaId, x.Tipo })
-            .Select(x => new { x.Key.CajaId, x.Key.Tipo, Importe = x.Sum(m => m.Importe) })
+        var movimientos = await contexto.MovimientosFinancieros.AsNoTracking()
+            .Where(x => x.Tipo != TipoMovimientoFinanciero.AjusteApertura &&
+                        x.Tipo != TipoMovimientoFinanciero.AjusteCierre &&
+                        x.Tipo != TipoMovimientoFinanciero.AjusteMigracion)
+            .Where(x => x.CajaId.HasValue && ids.Contains(x.CajaId.Value))
+            .GroupBy(x => new { x.CajaId, x.Tipo, x.Sentido })
+            .Select(x => new { x.Key.CajaId, x.Key.Tipo, x.Key.Sentido, Importe = x.Sum(m => m.Importe) })
             .ToArrayAsync(cancellationToken);
         var moneda = await contexto.ConfiguracionesNegocio.AsNoTracking()
             .Where(x => x.EsPrincipal)
@@ -73,13 +76,13 @@ public sealed partial class RepositorioReportes
 
         var filas = cajas.Take(filtros.Limite).Select(caja =>
         {
-            decimal Importe(TipoMovimientoCaja tipo) => movimientos
-                .Where(x => x.CajaId == caja.Id && x.Tipo == tipo).Sum(x => x.Importe);
-            var ingresosVentas = Importe(TipoMovimientoCaja.PagoVenta);
-            var ingresosManuales = Importe(TipoMovimientoCaja.IngresoManual);
-            var reembolsos = Importe(TipoMovimientoCaja.Reembolso);
-            var egresosManuales = Importe(TipoMovimientoCaja.EgresoManual);
-            var pagoComisiones = Importe(TipoMovimientoCaja.PagoComision);
+            decimal Importe(string tipo, SentidoMovimientoFinanciero sentido) => movimientos
+                .Where(x => x.CajaId == caja.Id && x.Tipo == tipo && x.Sentido == sentido).Sum(x => x.Importe);
+            var ingresosVentas = Importe(TipoMovimientoFinanciero.PagoVenta, SentidoMovimientoFinanciero.Entrada);
+            var ingresosManuales = Importe(TipoMovimientoFinanciero.IngresoManual, SentidoMovimientoFinanciero.Entrada);
+            var reembolsos = Importe(TipoMovimientoFinanciero.Reembolso, SentidoMovimientoFinanciero.Salida);
+            var egresosManuales = Importe(TipoMovimientoFinanciero.EgresoManual, SentidoMovimientoFinanciero.Salida);
+            var pagoComisiones = Importe(TipoMovimientoFinanciero.PagoComision, SentidoMovimientoFinanciero.Salida);
             var efectivoEsperado = caja.EfectivoEsperadoCierre ??
                 caja.EfectivoApertura + ingresosVentas + ingresosManuales - reembolsos - egresosManuales - pagoComisiones;
             return new FilaCaja(

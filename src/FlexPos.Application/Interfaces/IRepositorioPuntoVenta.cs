@@ -8,7 +8,7 @@ public interface IRepositorioPuntoVenta
     Task<IUnidadTrabajoPuntoVenta> IniciarTransaccionAsync(CancellationToken cancellationToken);
     Task<Caja?> ObtenerCajaActualAsync(CancellationToken cancellationToken);
     Task<Caja?> ObtenerCajaAsync(Guid id, CancellationToken cancellationToken);
-    Task<IReadOnlyList<MovimientoCaja>> ObtenerMovimientosCajaAsync(Guid cajaId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<MovimientoFinanciero>> ObtenerMovimientosCajaAsync(Guid cajaId, CancellationToken cancellationToken);
     Task<(IReadOnlyList<Caja> Elementos, int Total)> ListarCajasAsync(
         DateTimeOffset? desdeUtc,
         DateTimeOffset? hastaUtc,
@@ -32,6 +32,10 @@ public interface IUnidadTrabajoPuntoVenta : IAsyncDisposable
     Task<Caja?> ObtenerCajaActualAsync(CancellationToken cancellationToken);
     Task<Caja?> BloquearCajaActualAsync(CancellationToken cancellationToken);
     Task<Caja?> BloquearCajaAsync(Guid id, CancellationToken cancellationToken);
+    Task<CuentaFinanciera?> BloquearCuentaBaseAsync(
+        Guid configuracionId, TipoCuentaFinanciera tipo, string nombre, CancellationToken cancellationToken);
+    Task<CuentaFinanciera?> BloquearCuentaFinancieraAsync(Guid id, CancellationToken cancellationToken);
+    Task<decimal> CalcularSaldoCuentaAsync(Guid cuentaId, CancellationToken cancellationToken);
     Task<decimal> CalcularEfectivoEsperadoAsync(Guid cajaId, CancellationToken cancellationToken);
     Task<Cliente?> ObtenerClienteAsync(Guid id, CancellationToken cancellationToken);
     Task<IReadOnlyList<ArticuloInventario>> ObtenerArticulosAsync(
@@ -60,7 +64,7 @@ public interface IUnidadTrabajoPuntoVenta : IAsyncDisposable
     Task<Venta?> BloquearVentaAsync(Guid id, CancellationToken cancellationToken);
     void Agregar(Caja caja);
     void Agregar(Venta venta);
-    void Agregar(MovimientoCaja movimiento);
+    void Agregar(MovimientoFinanciero movimiento);
     void Agregar(MovimientoInventario movimiento);
     void Agregar(Comision comision);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);

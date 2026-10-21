@@ -10,14 +10,16 @@ public sealed class Caja : EntidadAuditable
     {
     }
 
-    private Caja(decimal efectivoApertura, DateTimeOffset fechaAperturaUtc, Guid usuarioAperturaId)
+    private Caja(Guid cuentaFinancieraId, decimal efectivoApertura, DateTimeOffset fechaAperturaUtc, Guid usuarioAperturaId)
     {
+        CuentaFinancieraId = cuentaFinancieraId;
         EfectivoApertura = efectivoApertura;
         FechaAperturaUtc = fechaAperturaUtc.ToUniversalTime();
         UsuarioAperturaId = usuarioAperturaId;
         Estado = EstadoCaja.Abierta;
     }
 
+    public Guid CuentaFinancieraId { get; private set; }
     public EstadoCaja Estado { get; private set; }
     public decimal EfectivoApertura { get; private set; }
     public DateTimeOffset FechaAperturaUtc { get; private set; }
@@ -28,16 +30,20 @@ public sealed class Caja : EntidadAuditable
     public DateTimeOffset? FechaCierreUtc { get; private set; }
     public Guid? UsuarioCierreId { get; private set; }
 
-    public static Resultado<Caja> Abrir(decimal efectivoInicial, DateTimeOffset fechaUtc, Guid usuarioId)
+    public static Resultado<Caja> Abrir(
+        Guid cuentaFinancieraId,
+        decimal efectivoInicial,
+        DateTimeOffset fechaUtc,
+        Guid usuarioId)
     {
-        if (efectivoInicial < 0m || decimal.Round(efectivoInicial, 2) != efectivoInicial ||
+        if (cuentaFinancieraId == Guid.Empty || efectivoInicial < 0m || decimal.Round(efectivoInicial, 2) != efectivoInicial ||
             fechaUtc == default || usuarioId == Guid.Empty)
         {
             return Resultado<Caja>.Fallo(new ErrorDominio(
                 "caja.apertura_invalida", "El efectivo inicial, la fecha o el usuario de apertura no son válidos."));
         }
 
-        return Resultado<Caja>.Exito(new Caja(efectivoInicial, fechaUtc, usuarioId));
+        return Resultado<Caja>.Exito(new Caja(cuentaFinancieraId, efectivoInicial, fechaUtc, usuarioId));
     }
 
     public Resultado<bool> Cerrar(

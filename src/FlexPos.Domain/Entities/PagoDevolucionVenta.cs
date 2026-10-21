@@ -8,11 +8,20 @@ public sealed class PagoDevolucionVenta : FlexPos.Domain.Abstractions.EntidadAud
     {
     }
 
-    private PagoDevolucionVenta(Guid metodoPagoId, string metodoPagoNombre, bool esEfectivo, decimal importe, string? referencia)
+    private PagoDevolucionVenta(
+        Guid metodoPagoId,
+        string metodoPagoNombre,
+        bool esEfectivo,
+        Guid cuentaFinancieraId,
+        string cuentaFinancieraNombre,
+        decimal importe,
+        string? referencia)
     {
         MetodoPagoId = metodoPagoId;
         MetodoPagoNombre = metodoPagoNombre;
         EsEfectivo = esEfectivo;
+        CuentaFinancieraId = cuentaFinancieraId;
+        CuentaFinancieraNombre = cuentaFinancieraNombre;
         Importe = importe;
         Referencia = string.IsNullOrWhiteSpace(referencia) ? null : referencia.Trim();
     }
@@ -21,15 +30,22 @@ public sealed class PagoDevolucionVenta : FlexPos.Domain.Abstractions.EntidadAud
     public Guid MetodoPagoId { get; private set; }
     public string MetodoPagoNombre { get; private set; } = string.Empty;
     public bool EsEfectivo { get; private set; }
+    public Guid CuentaFinancieraId { get; private set; }
+    public string CuentaFinancieraNombre { get; private set; } = string.Empty;
     public decimal Importe { get; private set; }
     public string? Referencia { get; private set; }
 
     public static Resultado<PagoDevolucionVenta> Crear(
         MetodoPagoConfigurado metodo,
+        CuentaFinanciera cuenta,
         decimal importe,
         string? referencia)
     {
-        if (metodo.Id == Guid.Empty || !metodo.Activo || importe <= 0m ||
+        if (metodo.Id == Guid.Empty || !metodo.Activo ||
+            cuenta.Id == Guid.Empty || !cuenta.Activa ||
+            !metodo.EsCompatibleConCuenta(cuenta) ||
+            cuenta.CodigoMoneda.Length != 3 ||
+            importe <= 0m ||
             importe > 9_999_999_999_999_999.99m || decimal.Round(importe, 2) != importe ||
             (metodo.RequiereReferencia && string.IsNullOrWhiteSpace(referencia)) ||
             (!string.IsNullOrWhiteSpace(referencia) && referencia.Trim().Length > 120))
@@ -39,6 +55,6 @@ public sealed class PagoDevolucionVenta : FlexPos.Domain.Abstractions.EntidadAud
         }
 
         return Resultado<PagoDevolucionVenta>.Exito(new PagoDevolucionVenta(
-            metodo.Id, metodo.Nombre, metodo.EsEfectivo, importe, referencia));
+            metodo.Id, metodo.Nombre, metodo.EsEfectivo, cuenta.Id, cuenta.Nombre, importe, referencia));
     }
 }

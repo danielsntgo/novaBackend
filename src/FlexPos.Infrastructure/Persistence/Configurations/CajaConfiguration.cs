@@ -12,6 +12,7 @@ public sealed class CajaConfiguration : IEntityTypeConfiguration<Caja>
             "ck_cajas_estado", "estado IN ('Abierta', 'Cerrada')"));
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+        builder.Property(x => x.CuentaFinancieraId).HasColumnName("cuenta_financiera_id");
         builder.Property(x => x.Estado).HasColumnName("estado").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.EfectivoApertura).HasColumnName("efectivo_apertura").HasPrecision(18, 2);
         builder.Property(x => x.FechaAperturaUtc).HasColumnName("fecha_apertura_utc").HasColumnType("timestamp with time zone");
@@ -26,6 +27,8 @@ public sealed class CajaConfiguration : IEntityTypeConfiguration<Caja>
         builder.Property(x => x.CreadoPorId).HasColumnName("creado_por_id");
         builder.Property(x => x.ModificadoPorId).HasColumnName("modificado_por_id");
         builder.Property(x => x.Version).IsRowVersion();
+        builder.HasOne<CuentaFinanciera>().WithMany().HasForeignKey(x => x.CuentaFinancieraId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.Estado).IsUnique().HasFilter("estado = 'Abierta'").HasDatabaseName("ux_cajas_abierta_compartida");
         builder.HasIndex(x => x.FechaAperturaUtc).HasDatabaseName("ix_cajas_fecha_apertura");
     }

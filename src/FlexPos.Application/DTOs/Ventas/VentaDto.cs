@@ -25,6 +25,8 @@ public sealed record PagoVentaDto(
     Guid MetodoPagoId,
     string MetodoPagoNombre,
     bool EsEfectivo,
+    Guid CuentaFinancieraId,
+    string CuentaFinancieraNombre,
     decimal Importe,
     string? Referencia,
     DateTimeOffset FechaUtc);
@@ -51,6 +53,8 @@ public sealed record PagoDevolucionVentaDto(
     Guid MetodoPagoId,
     string MetodoPagoNombre,
     bool EsEfectivo,
+    Guid CuentaFinancieraId,
+    string CuentaFinancieraNombre,
     decimal Importe,
     string? Referencia);
 

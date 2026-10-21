@@ -37,6 +37,30 @@ public sealed class ServicioReportesTests
         Assert.Equal("reporte.filtro_no_aplicable", resultado.Error?.Codigo);
     }
 
+    [Fact]
+    public async Task Obtener_RechazaCuentaFinancieraEnOtroTipoDeInforme()
+    {
+        var resultado = await servicio.ObtenerAsync("ventas",
+            new FiltrosReporte(CuentaFinancieraId: Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal("reporte.filtro_no_aplicable", resultado.Error?.Codigo);
+    }
+
+    [Fact]
+    public async Task Obtener_AceptaInformeDeCuentas()
+    {
+        var capturador = new RepositorioCaptura();
+        var servicioCuentas = new ServicioReportes(capturador, new ExportadorInalcanzable());
+        var cuentaId = Guid.NewGuid();
+
+        var resultado = await servicioCuentas.ObtenerAsync("CUENTAS",
+            new FiltrosReporte(CuentaFinancieraId: cuentaId), CancellationToken.None);
+
+        Assert.True(resultado.EsExitoso);
+        Assert.Equal("cuentas", capturador.Tipo);
+        Assert.Equal(cuentaId, capturador.Filtros?.CuentaFinancieraId);
+    }
+
     private sealed class RepositorioInalcanzable : IRepositorioReportes
     {
         public Task<ReporteDto> ObtenerAsync(string tipo, FiltrosReporte filtros, CancellationToken cancellationToken) =>
@@ -47,5 +71,19 @@ public sealed class ServicioReportesTests
     {
         public ArchivoReporte Exportar(ReporteDto reporte, string formato) =>
             throw new InvalidOperationException("No se esperaba exportar un informe.");
+    }
+
+    private sealed class RepositorioCaptura : IRepositorioReportes
+    {
+        public string? Tipo { get; private set; }
+        public FiltrosReporte? Filtros { get; private set; }
+
+        public Task<ReporteDto> ObtenerAsync(string tipo, FiltrosReporte filtros, CancellationToken cancellationToken)
+        {
+            Tipo = tipo;
+            Filtros = filtros;
+            return Task.FromResult(new ReporteDto(tipo, "", DateTimeOffset.UtcNow, null, null,
+                [], [], [], 0, filtros.Limite, false));
+        }
     }
 }

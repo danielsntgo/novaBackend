@@ -12,8 +12,28 @@ namespace FlexPos.Api.Controllers;
 [ApiController]
 [Authorize(Policy = PoliticasAutorizacion.OperacionDiaria)]
 [Route("api/ventas")]
-public sealed class VentasController(ServicioVentas servicio) : ControllerBase
+public sealed class VentasController(ServicioVentas servicio, ServicioCatalogoVentas catalogo) : ControllerBase
 {
+    [HttpGet("catalogo")]
+    [ProducesResponseType(typeof(CatalogoVentasDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerCatalogo(CancellationToken cancellationToken)
+    {
+        var resultado = await catalogo.ObtenerAsync(cancellationToken);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
+    }
+
+    [HttpGet("catalogo/productos")]
+    [ProducesResponseType(typeof(PaginaProductosOperacionDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListarProductosCatalogo(
+        [FromQuery] string? buscar,
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamanoPagina = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var resultado = await catalogo.ListarProductosAsync(buscar, pagina, tamanoPagina, cancellationToken);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
+    }
+
     [HttpGet]
     [ProducesResponseType(typeof(PaginaVentasDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
@@ -139,7 +159,7 @@ public sealed class VentasController(ServicioVentas servicio) : ControllerBase
                 "venta.producto_inactivo" or "venta.servicio_inactivo" or "venta.empleado_inactivo" or
                 "venta.impuesto_inactivo" or "venta.metodo_pago_inactivo" or
                 "venta.facturacion_deshabilitada" or "venta.saldo_pendiente_deshabilitado" or
-                "venta.cantidad_devolucion_invalida" =>
+                "venta.cantidad_devolucion_invalida" or "cuenta_financiera.saldo_insuficiente" =>
                 StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) =>
                 StatusCodes.Status409Conflict,

@@ -12,7 +12,7 @@ public sealed class ServicioReportes(
     private static readonly HashSet<string> Tipos = new(StringComparer.OrdinalIgnoreCase)
     {
         "ventas", "ingresos", "productos", "servicios", "inventario",
-        "compras", "caja", "clientes", "empleados", "comisiones"
+        "compras", "caja", "clientes", "empleados", "comisiones", "cuentas"
     };
 
     public async Task<Resultado<ReporteDto>> ObtenerAsync(
@@ -60,7 +60,8 @@ public sealed class ServicioReportes(
             filtros.Limite is < 1 or > 10000 ||
             filtros.ClienteId == Guid.Empty || filtros.EmpleadoId == Guid.Empty ||
             filtros.ArticuloId == Guid.Empty || filtros.ServicioId == Guid.Empty ||
-            filtros.ProveedorId == Guid.Empty || filtros.MetodoPagoId == Guid.Empty)
+            filtros.ProveedorId == Guid.Empty || filtros.MetodoPagoId == Guid.Empty ||
+            filtros.CuentaFinancieraId == Guid.Empty)
         {
             return new ErrorDominio(
                 "reporte.filtros_invalidos", "El tipo, los filtros o el límite del reporte no son válidos.");
@@ -73,7 +74,8 @@ public sealed class ServicioReportes(
             filtros.ArticuloId.HasValue && tipoNormalizado is not ("productos" or "inventario") ||
             filtros.ServicioId.HasValue && tipoNormalizado is not ("servicios" or "comisiones") ||
             filtros.ProveedorId.HasValue && tipoNormalizado != "compras" ||
-            filtros.MetodoPagoId.HasValue && tipoNormalizado != "ingresos";
+            filtros.MetodoPagoId.HasValue && tipoNormalizado != "ingresos" ||
+            filtros.CuentaFinancieraId.HasValue && tipoNormalizado != "cuentas";
         if (filtroIncompatible)
         {
             return new ErrorDominio(

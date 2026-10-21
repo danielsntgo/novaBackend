@@ -116,7 +116,8 @@ public sealed class ConfiguracionController(ServicioConfiguracion servicio) : Co
         CancellationToken cancellationToken)
     {
         var resultado = await servicio.CrearMetodoPagoAsync(
-            new SolicitudMetodoPago(solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo), cancellationToken);
+            new SolicitudMetodoPago(solicitud.Nombre, solicitud.RequiereReferencia,
+                solicitud.CuentaFinancieraId, solicitud.EsEfectivo), cancellationToken);
         return resultado.EsExitoso
             ? Created($"/api/configuracion/metodos-pago/{resultado.Valor!.Id}", resultado.Valor)
             : CrearProblema(resultado.Error!);
@@ -129,7 +130,8 @@ public sealed class ConfiguracionController(ServicioConfiguracion servicio) : Co
         CancellationToken cancellationToken)
     {
         var resultado = await servicio.ActualizarMetodoPagoAsync(
-            id, new SolicitudMetodoPago(solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo), cancellationToken);
+            id, new SolicitudMetodoPago(solicitud.Nombre, solicitud.RequiereReferencia,
+                solicitud.CuentaFinancieraId, solicitud.EsEfectivo), cancellationToken);
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 

@@ -17,7 +17,7 @@ public sealed class ServicioCaja(
         if (caja is null)
         {
             return Resultado<CajaDto?>.Exito(null);
-        }
+         }
 
         await using var unidad = await repositorio.IniciarTransaccionAsync(cancellationToken);
         var efectivo = await unidad.CalcularEfectivoEsperadoAsync(caja.Id, cancellationToken);
@@ -96,13 +96,35 @@ public sealed class ServicioCaja(
                 "configuracion.no_configurada", "Primero debe registrar la configuración del establecimiento."));
         }
 
-        var nueva = Caja.Abrir(solicitud.EfectivoInicial, reloj.GetUtcNow(), usuarioId.Value);
+        var cuenta = await unidad.BloquearCuentaBaseAsync(
+            configuracion.Id, TipoCuentaFinanciera.Efectivo, ServicioFinanzas.CuentaEfectivoBase, cancellationToken);
+        if (cuenta is null || !cuenta.Activa || cuenta.CodigoMoneda != configuracion.CodigoMoneda)
+        {
+            return Resultado<CajaDto>.Fallo(Conflicto("No se encontró una cuenta de efectivo activa para abrir caja."));
+        }
+
+        var saldoLibro = await unidad.CalcularSaldoCuentaAsync(cuenta.Id, cancellationToken);
+        var nueva = Caja.Abrir(cuenta.Id, solicitud.EfectivoInicial, reloj.GetUtcNow(), usuarioId.Value);
         if (!nueva.EsExitoso)
         {
             return Resultado<CajaDto>.Fallo(nueva.Error!);
         }
 
         unidad.Agregar(nueva.Valor!);
+        if (solicitud.EfectivoInicial != saldoLibro)
+        {
+            var diferencia = solicitud.EfectivoInicial - saldoLibro;
+            var ajuste = CrearMovimientoAjuste(
+                cuenta.Id, TipoMovimientoFinanciero.AjusteApertura, nueva.Valor!.Id,
+                diferencia, configuracion.CodigoMoneda, nueva.Valor.FechaAperturaUtc, usuarioId.Value);
+            if (!ajuste.EsExitoso)
+            {
+                return Resultado<CajaDto>.Fallo(ajuste.Error!);
+            }
+
+            unidad.Agregar(ajuste.Valor!);
+        }
+
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
         {
             return Resultado<CajaDto>.Fallo(Conflicto("La caja cambió en otra operación."));
@@ -131,10 +153,29 @@ public sealed class ServicioCaja(
         }
 
         var efectivoEsperado = await unidad.CalcularEfectivoEsperadoAsync(id, cancellationToken);
+        var cuenta = await unidad.BloquearCuentaFinancieraAsync(caja.CuentaFinancieraId, cancellationToken);
+        if (cuenta is null)
+        {
+            return Resultado<CajaDto>.Fallo(Conflicto("No se encontró la cuenta financiera asociada a la caja."));
+        }
+
         var cierre = caja.Cerrar(solicitud.EfectivoContado, efectivoEsperado, reloj.GetUtcNow(), usuarioId.Value);
         if (!cierre.EsExitoso)
         {
             return Resultado<CajaDto>.Fallo(cierre.Error!);
+        }
+
+        if (caja.DiferenciaCierre is decimal diferencia && diferencia != 0m)
+        {
+            var ajuste = CrearMovimientoAjuste(
+                cuenta.Id, TipoMovimientoFinanciero.AjusteCierre, caja.Id, diferencia,
+                cuenta.CodigoMoneda, caja.FechaCierreUtc!.Value, usuarioId.Value);
+            if (!ajuste.EsExitoso)
+            {
+                return Resultado<CajaDto>.Fallo(ajuste.Error!);
+            }
+
+            unidad.Agregar(ajuste.Valor!);
         }
 
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
@@ -183,13 +224,31 @@ public sealed class ServicioCaja(
                 "configuracion.no_configurada", "Primero debe registrar la configuración del establecimiento."));
         }
 
-        var movimiento = MovimientoCaja.Crear(id, tipo, solicitud.Importe,
-            configuracion.CodigoMoneda, solicitud.Concepto);
+        var cuenta = await unidad.BloquearCuentaFinancieraAsync(caja.CuentaFinancieraId, cancellationToken);
+        if (cuenta is null || !cuenta.Activa)
+        {
+            return Resultado<MovimientoCajaDto>.Fallo(Conflicto("La cuenta de efectivo no está disponible."));
+        }
+
+        var sentido = tipo == TipoMovimientoCaja.IngresoManual
+            ? SentidoMovimientoFinanciero.Entrada
+            : SentidoMovimientoFinanciero.Salida;
+        var saldo = await unidad.CalcularSaldoCuentaAsync(cuenta.Id, cancellationToken);
+        if (sentido == SentidoMovimientoFinanciero.Salida &&
+            !cuenta.ValidarSaldo(saldo - solicitud.Importe).EsExitoso)
+        {
+            return Resultado<MovimientoCajaDto>.Fallo(Conflicto("La cuenta no tiene saldo suficiente para este egreso."));
+        }
+
+        var movimiento = MovimientoFinanciero.Crear(
+            cuenta.Id, tipo.ToString(), sentido, solicitud.Importe, configuracion.CodigoMoneda,
+            reloj.GetUtcNow(), solicitud.Concepto, cajaId: id);
         if (!movimiento.EsExitoso)
         {
             return Resultado<MovimientoCajaDto>.Fallo(movimiento.Error!);
         }
 
+        movimiento.Valor!.RegistrarCreacion(reloj.GetUtcNow(), usuarioId.Value);
         unidad.Agregar(movimiento.Valor!);
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
         {
@@ -212,17 +271,38 @@ public sealed class ServicioCaja(
         caja.FechaCierreUtc,
         caja.UsuarioCierreId);
 
-    private static MovimientoCajaDto Convertir(MovimientoCaja movimiento) => new(
+    private static MovimientoCajaDto Convertir(MovimientoFinanciero movimiento) => new(
         movimiento.Id,
-        movimiento.Tipo.ToString(),
+        movimiento.Tipo,
         movimiento.Importe,
         movimiento.CodigoMoneda,
         movimiento.Concepto,
         movimiento.VentaId,
         movimiento.DevolucionVentaId,
         movimiento.LiquidacionComisionId,
-        movimiento.FechaCreacionUtc,
+        movimiento.FechaUtc,
         movimiento.CreadoPorId);
+
+    private static FlexPos.Domain.Errors.Resultado<MovimientoFinanciero> CrearMovimientoAjuste(
+        Guid cuentaId,
+        string tipo,
+        Guid cajaId,
+        decimal diferencia,
+        string codigoMoneda,
+        DateTimeOffset fechaUtc,
+        Guid usuarioId)
+    {
+        var movimiento = MovimientoFinanciero.Crear(
+            cuentaId, tipo,
+            diferencia >= 0m ? SentidoMovimientoFinanciero.Entrada : SentidoMovimientoFinanciero.Salida,
+            Math.Abs(diferencia), codigoMoneda, fechaUtc, tipo, cajaId: cajaId);
+        if (movimiento.EsExitoso)
+        {
+            movimiento.Valor!.RegistrarCreacion(fechaUtc, usuarioId);
+        }
+
+        return movimiento;
+    }
 
     private static bool ValidarPaginacion(int pagina, int tamanoPagina) =>
         pagina >= 1 && tamanoPagina is >= 1 and <= 100 && (pagina - 1L) * tamanoPagina <= int.MaxValue;

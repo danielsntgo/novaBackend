@@ -27,13 +27,14 @@ public sealed class ReportesController(ServicioReportes servicio) : ControllerBa
         [FromQuery] Guid? servicioId,
         [FromQuery] Guid? proveedorId,
         [FromQuery] Guid? metodoPagoId,
+        [FromQuery] Guid? cuentaFinancieraId,
         [FromQuery] string? estado,
         [FromQuery] int limite = 5000,
         CancellationToken cancellationToken = default)
     {
         var resultado = await servicio.ObtenerAsync(tipo, CrearFiltros(
             desdeUtc, hastaUtc, clienteId, empleadoId, articuloId, servicioId, proveedorId,
-            metodoPagoId, estado, limite), cancellationToken);
+            metodoPagoId, cuentaFinancieraId, estado, limite), cancellationToken);
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
@@ -52,13 +53,14 @@ public sealed class ReportesController(ServicioReportes servicio) : ControllerBa
         [FromQuery] Guid? servicioId,
         [FromQuery] Guid? proveedorId,
         [FromQuery] Guid? metodoPagoId,
+        [FromQuery] Guid? cuentaFinancieraId,
         [FromQuery] string? estado,
         [FromQuery] int limite = 5000,
         CancellationToken cancellationToken = default)
     {
         var resultado = await servicio.ExportarAsync(tipo, formato.ToLowerInvariant(), CrearFiltros(
             desdeUtc, hastaUtc, clienteId, empleadoId, articuloId, servicioId, proveedorId,
-            metodoPagoId, estado, limite), cancellationToken);
+            metodoPagoId, cuentaFinancieraId, estado, limite), cancellationToken);
         return resultado.EsExitoso
             ? File(resultado.Valor!.Contenido, resultado.Valor.TipoContenido, resultado.Valor.Nombre)
             : CrearProblema(resultado.Error!);
@@ -73,10 +75,11 @@ public sealed class ReportesController(ServicioReportes servicio) : ControllerBa
         Guid? servicioId,
         Guid? proveedorId,
         Guid? metodoPagoId,
+        Guid? cuentaFinancieraId,
         string? estado,
         int limite) => new(
         desdeUtc, hastaUtc, clienteId, empleadoId, articuloId, servicioId,
-        proveedorId, metodoPagoId, estado, limite);
+        proveedorId, metodoPagoId, estado, limite, cuentaFinancieraId);
 
     private ObjectResult CrearProblema(ErrorDominio error) =>
         Problem(statusCode: StatusCodes.Status400BadRequest,

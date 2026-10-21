@@ -298,6 +298,16 @@ public sealed class ServicioVentas(
             return Resultado<VentaDto>.Fallo(pagos.Error!);
         }
 
+        foreach (var grupo in pagos.Valor!.GroupBy(x => x.CuentaFinancieraId).OrderBy(x => x.Key))
+        {
+            var primerPago = grupo.First();
+            var cuenta = await unidad.BloquearCuentaFinancieraAsync(grupo.Key, cancellationToken);
+            if (!CuentaValidaParaPago(cuenta, configuracion.Id, configuracion.CodigoMoneda, primerPago.EsEfectivo))
+            {
+                return Resultado<VentaDto>.Fallo(ConflictoCuenta());
+            }
+        }
+
         foreach (var pago in pagos.Valor!)
         {
             var resultadoPago = ventaCreada.Valor!.RegistrarPago(pago);
@@ -306,18 +316,17 @@ public sealed class ServicioVentas(
                 return Resultado<VentaDto>.Fallo(resultadoPago.Error!);
             }
 
-            if (pago.EsEfectivo)
+            var movimiento = MovimientoFinanciero.Crear(
+                pago.CuentaFinancieraId, TipoMovimientoFinanciero.PagoVenta,
+                SentidoMovimientoFinanciero.Entrada, pago.Importe, configuracion.CodigoMoneda,
+                reloj.GetUtcNow(), "Pago de la venta", pago.EsEfectivo ? caja.Id : null,
+                pago.MetodoPagoId, ventaCreada.Valor.Id);
+            if (!movimiento.EsExitoso)
             {
-                var movimientoCaja = MovimientoCaja.Crear(
-                    caja.Id, TipoMovimientoCaja.PagoVenta, pago.Importe, configuracion.CodigoMoneda,
-                    "Pago en efectivo de la venta", ventaCreada.Valor.Id);
-                if (!movimientoCaja.EsExitoso)
-                {
-                    return Resultado<VentaDto>.Fallo(movimientoCaja.Error!);
-                }
-
-                unidad.Agregar(movimientoCaja.Valor!);
+                return Resultado<VentaDto>.Fallo(movimiento.Error!);
             }
+
+            unidad.Agregar(movimiento.Valor!);
         }
 
         if (ventaCreada.Valor!.TotalPendiente > 0m && !configuracion.PermitirSaldosPendientes)
@@ -467,6 +476,16 @@ public sealed class ServicioVentas(
             return Resultado<VentaDto>.Fallo(pagos.Error!);
         }
 
+        foreach (var grupo in pagos.Valor!.GroupBy(x => x.CuentaFinancieraId).OrderBy(x => x.Key))
+        {
+            var primerPago = grupo.First();
+            var cuenta = await unidad.BloquearCuentaFinancieraAsync(grupo.Key, cancellationToken);
+            if (!CuentaValidaParaPago(cuenta, configuracion.Id, configuracion.CodigoMoneda, primerPago.EsEfectivo))
+            {
+                return Resultado<VentaDto>.Fallo(ConflictoCuenta());
+            }
+        }
+
         foreach (var pago in pagos.Valor!)
         {
             var resultadoPago = venta.RegistrarPago(pago);
@@ -475,18 +494,17 @@ public sealed class ServicioVentas(
                 return Resultado<VentaDto>.Fallo(resultadoPago.Error!);
             }
 
-            if (pago.EsEfectivo)
+            var movimiento = MovimientoFinanciero.Crear(
+                pago.CuentaFinancieraId, TipoMovimientoFinanciero.PagoVenta,
+                SentidoMovimientoFinanciero.Entrada, pago.Importe, configuracion.CodigoMoneda,
+                reloj.GetUtcNow(), "Pago de saldo pendiente", pago.EsEfectivo ? caja.Id : null,
+                pago.MetodoPagoId, venta.Id);
+            if (!movimiento.EsExitoso)
             {
-                var movimientoCaja = MovimientoCaja.Crear(
-                    caja.Id, TipoMovimientoCaja.PagoVenta, pago.Importe, configuracion.CodigoMoneda,
-                    "Pago de saldo pendiente", venta.Id);
-                if (!movimientoCaja.EsExitoso)
-                {
-                    return Resultado<VentaDto>.Fallo(movimientoCaja.Error!);
-                }
-
-                unidad.Agregar(movimientoCaja.Valor!);
+                return Resultado<VentaDto>.Fallo(movimiento.Error!);
             }
+
+            unidad.Agregar(movimiento.Valor!);
         }
 
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
@@ -689,17 +707,35 @@ public sealed class ServicioVentas(
             }
         }
 
-        foreach (var pago in devolucionCreada.Valor!.Pagos.Where(x => x.EsEfectivo))
+        var pagosReembolso = devolucionCreada.Valor!.Pagos
+            .OrderBy(x => x.CuentaFinancieraId)
+            .ToArray();
+        foreach (var grupo in pagosReembolso.GroupBy(x => x.CuentaFinancieraId))
         {
-            var movimientoCaja = MovimientoCaja.Crear(
-                caja.Id, TipoMovimientoCaja.Reembolso, pago.Importe, configuracion.CodigoMoneda,
-                motivo, devolucionVentaId: devolucionCreada.Valor.Id);
-            if (!movimientoCaja.EsExitoso)
+            var cuenta = await unidad.BloquearCuentaFinancieraAsync(grupo.Key, cancellationToken);
+            var saldo = cuenta is null ? 0m : await unidad.CalcularSaldoCuentaAsync(cuenta.Id, cancellationToken);
+            var saldoValidado = cuenta?.ValidarSaldo(saldo - grupo.Sum(x => x.Importe));
+            if (cuenta is null || !cuenta.Activa || cuenta.ConfiguracionNegocioId != configuracion.Id ||
+                cuenta.CodigoMoneda != configuracion.CodigoMoneda || saldoValidado is null || !saldoValidado.EsExitoso)
             {
-                return Resultado<VentaDto>.Fallo(movimientoCaja.Error!);
+                return Resultado<VentaDto>.Fallo(new ErrorDominio(
+                    "cuenta_financiera.saldo_insuficiente", "La cuenta seleccionada no tiene saldo suficiente para reembolsar."));
+            }
+        }
+
+        foreach (var pago in pagosReembolso)
+        {
+            var movimiento = MovimientoFinanciero.Crear(
+                pago.CuentaFinancieraId, TipoMovimientoFinanciero.Reembolso,
+                SentidoMovimientoFinanciero.Salida, pago.Importe, configuracion.CodigoMoneda,
+                reloj.GetUtcNow(), motivo, pago.EsEfectivo ? caja.Id : null, pago.MetodoPagoId,
+                devolucionVentaId: devolucionCreada.Valor.Id);
+            if (!movimiento.EsExitoso)
+            {
+                return Resultado<VentaDto>.Fallo(movimiento.Error!);
             }
 
-            unidad.Agregar(movimientoCaja.Valor!);
+            unidad.Agregar(movimiento.Valor!);
         }
 
         var productosPorDevolver = venta.Detalles
@@ -772,7 +808,14 @@ public sealed class ServicioVentas(
                     "venta.metodo_pago_inactivo", "El método de pago no existe o no pertenece al negocio."));
             }
 
-            var pago = PagoVenta.Crear(ventaId, cajaId, metodo, solicitud.Importe, solicitud.Referencia);
+            if (!metodo.CuentaFinanciera.Activa || metodo.CuentaFinanciera.ConfiguracionNegocioId != configuracionId)
+            {
+                return Resultado<IReadOnlyList<PagoVenta>>.Fallo(new ErrorDominio(
+                    "venta.cuenta_financiera_inactiva", "La cuenta asignada al método de pago no está activa."));
+            }
+
+            var pago = PagoVenta.Crear(ventaId, cajaId, metodo, metodo.CuentaFinanciera,
+                solicitud.Importe, solicitud.Referencia);
             if (!pago.EsExitoso)
             {
                 return Resultado<IReadOnlyList<PagoVenta>>.Fallo(pago.Error!);
@@ -801,7 +844,14 @@ public sealed class ServicioVentas(
                     "venta.metodo_pago_inactivo", "El método de reembolso no existe o no pertenece al negocio."));
             }
 
-            var pago = PagoDevolucionVenta.Crear(metodo, solicitud.Importe, solicitud.Referencia);
+            if (!metodo.CuentaFinanciera.Activa || metodo.CuentaFinanciera.ConfiguracionNegocioId != configuracionId)
+            {
+                return Resultado<IReadOnlyList<PagoDevolucionVenta>>.Fallo(new ErrorDominio(
+                    "venta.cuenta_financiera_inactiva", "La cuenta asignada al método de reembolso no está activa."));
+            }
+
+            var pago = PagoDevolucionVenta.Crear(metodo, metodo.CuentaFinanciera,
+                solicitud.Importe, solicitud.Referencia);
             if (!pago.EsExitoso)
             {
                 return Resultado<IReadOnlyList<PagoDevolucionVenta>>.Fallo(pago.Error!);
@@ -917,7 +967,8 @@ public sealed class ServicioVentas(
             x.ValorDescuento, x.DescuentoImporte, x.DescuentoGeneralImporte, x.ImpuestoNombre,
             x.ImpuestoPorcentaje, x.ImpuestoImporte, x.TotalImporte)).ToArray(),
         venta.Pagos.OrderBy(x => x.FechaCreacionUtc).Select(x => new PagoVentaDto(
-            x.Id, x.MetodoPagoId, x.MetodoPagoNombre, x.EsEfectivo, x.Importe, x.Referencia,
+            x.Id, x.MetodoPagoId, x.MetodoPagoNombre, x.EsEfectivo, x.CuentaFinancieraId,
+            x.CuentaFinancieraNombre, x.Importe, x.Referencia,
             x.FechaCreacionUtc)).ToArray(),
         venta.Documentos.OrderBy(x => x.TipoDocumento).Select(x => new DocumentoVentaDto(
             x.Id, x.TipoDocumento.ToString(), x.NumeroCompleto, x.FechaEmisionUtc, x.Total)).ToArray(),
@@ -926,7 +977,8 @@ public sealed class ServicioVentas(
             x.Detalles.Select(detalle => new DetalleDevolucionDto(
                 detalle.DetalleVentaId, detalle.Cantidad, detalle.Importe)).ToArray(),
             x.Pagos.Select(pago => new PagoDevolucionVentaDto(
-                pago.MetodoPagoId, pago.MetodoPagoNombre, pago.EsEfectivo, pago.Importe, pago.Referencia)).ToArray()))
+                pago.MetodoPagoId, pago.MetodoPagoNombre, pago.EsEfectivo, pago.CuentaFinancieraId,
+                pago.CuentaFinancieraNombre, pago.Importe, pago.Referencia)).ToArray()))
             .ToArray(),
         venta.FechaCreacionUtc,
         venta.FechaModificacionUtc);
@@ -942,6 +994,20 @@ public sealed class ServicioVentas(
 
     private static ErrorDominio ErrorUsuario() => new(
         "usuario.no_autenticado", "No se pudo identificar al usuario de la operación.");
+
+    private static bool CuentaValidaParaPago(
+        CuentaFinanciera? cuenta,
+        Guid configuracionId,
+        string codigoMoneda,
+        bool esEfectivo) =>
+        cuenta is not null && cuenta.Activa && cuenta.ConfiguracionNegocioId == configuracionId &&
+        cuenta.CodigoMoneda == codigoMoneda &&
+        (esEfectivo
+            ? cuenta.Tipo == TipoCuentaFinanciera.Efectivo
+            : cuenta.Tipo is TipoCuentaFinanciera.Banco or TipoCuentaFinanciera.Billetera or TipoCuentaFinanciera.Otro);
+
+    private static ErrorDominio ConflictoCuenta() => new(
+        "cuenta_financiera.conflicto", "La cuenta asignada al método de pago ya no está disponible.");
 
     private static ErrorDominio NoEncontrada() => new(
         "venta.no_encontrada", "No se encontró la venta solicitada.");

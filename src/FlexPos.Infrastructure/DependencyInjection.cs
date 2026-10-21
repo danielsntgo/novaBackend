@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentidadUsuarios, ServicioIdentidadUsuarios>();
         services.AddScoped<IRepositorioTokensRenovacion, RepositorioTokensRenovacion>();
         services.AddScoped<IRepositorioConfiguracion, RepositorioConfiguracion>();
+        services.AddScoped<IRepositorioFinanzas, RepositorioFinanzas>();
         services.AddScoped<IRepositorioClientes, RepositorioClientes>();
         services.AddScoped<IRepositorioEmpleados, RepositorioEmpleados>();
         services.AddScoped<IRepositorioServicios, RepositorioServicios>();

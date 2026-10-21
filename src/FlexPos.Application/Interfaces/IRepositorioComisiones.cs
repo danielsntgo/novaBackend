@@ -57,7 +57,9 @@ public interface IUnidadTrabajoComisiones : IAsyncDisposable
         CancellationToken cancellationToken);
     void Agregar(ReglaComision regla);
     void Agregar(LiquidacionComision liquidacion);
-    void Agregar(MovimientoCaja movimiento);
+    void Agregar(MovimientoFinanciero movimiento);
+    Task<CuentaFinanciera?> BloquearCuentaFinancieraAsync(Guid id, CancellationToken cancellationToken);
+    Task<decimal> CalcularSaldoCuentaAsync(Guid cuentaId, CancellationToken cancellationToken);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
     Task ConfirmarAsync(CancellationToken cancellationToken);
 }

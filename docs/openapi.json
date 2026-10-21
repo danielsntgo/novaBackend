@@ -3478,6 +3478,407 @@
         }
       }
     },
+    "/api/finanzas/cuentas": {
+      "get": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "activa",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "tamanoPagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCuentasFinancierasDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCuentasFinancierasDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCuentasFinancierasDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Finanzas"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/finanzas/cuentas/{id}": {
+      "get": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudCuentaFinanciera"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/finanzas/cuentas/{id}/estado": {
+      "patch": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudEstadoCuentaFinanciera"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudEstadoCuentaFinanciera"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudEstadoCuentaFinanciera"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaFinancieraDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/finanzas/cuentas/{id}/movimientos": {
+      "get": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desdeUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hastaUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "tamanoPagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMovimientosFinancierosDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMovimientosFinancierosDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMovimientosFinancierosDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/finanzas/resumen": {
+      "get": {
+        "tags": [
+          "Finanzas"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenFinancieroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenFinancieroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenFinancieroDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventario/articulos": {
       "get": {
         "tags": [
@@ -4345,6 +4746,14 @@
               "format": "int32",
               "default": 5000
             }
+          },
+          {
+            "name": "cuentaFinancieraId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -4496,15 +4905,23 @@
               "format": "int32",
               "default": 5000
             }
+          },
+          {
+            "name": "cuentaFinancieraId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": { },
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { },
-              "text/csv": { }
+              "application/pdf": {},
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+              "text/csv": {}
             }
           },
           "400": {
@@ -5143,6 +5560,99 @@
         }
       }
     },
+    "/api/ventas/catalogo": {
+      "get": {
+        "tags": [
+          "Ventas"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogoVentasDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogoVentasDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogoVentasDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ventas/catalogo/productos": {
+      "get": {
+        "tags": [
+          "Ventas"
+        ],
+        "parameters": [
+          {
+            "name": "buscar",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "tamanoPagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaProductosOperacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaProductosOperacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaProductosOperacionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ventas": {
       "get": {
         "tags": [
@@ -5638,7 +6148,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": { }
+              "application/pdf": {}
             }
           },
           "404": {
@@ -5674,7 +6184,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": { }
+              "application/pdf": {}
             }
           },
           "404": {
@@ -6022,6 +6532,54 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CatalogoVentasDto": {
+        "required": [
+          "metodosPago",
+          "impuestos",
+          "empleados",
+          "codigoMoneda",
+          "permitirVentaSinStock",
+          "permitirSaldosPendientes",
+          "facturacionHabilitada",
+          "exigirEmpleadoVentaServicio"
+        ],
+        "type": "object",
+        "properties": {
+          "metodosPago": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetodoPagoOperacionDto"
+            }
+          },
+          "impuestos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImpuestoOperacionDto"
+            }
+          },
+          "empleados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpleadoOperacionDto"
+            }
+          },
+          "codigoMoneda": {
+            "type": "string"
+          },
+          "permitirVentaSinStock": {
+            "type": "boolean"
+          },
+          "permitirSaldosPendientes": {
+            "type": "boolean"
+          },
+          "facturacionHabilitada": {
+            "type": "boolean"
+          },
+          "exigirEmpleadoVentaServicio": {
+            "type": "boolean"
           }
         }
       },
@@ -6610,6 +7168,80 @@
           }
         }
       },
+      "CuentaFinancieraDto": {
+        "required": [
+          "id",
+          "nombre",
+          "tipo",
+          "codigoMoneda",
+          "entidad",
+          "ultimosDigitos",
+          "cupoCredito",
+          "saldo",
+          "activa",
+          "fechaCreacionUtc",
+          "fechaModificacionUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "codigoMoneda": {
+            "type": "string"
+          },
+          "entidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ultimosDigitos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cupoCredito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "saldo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "fechaCreacionUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaModificacionUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "DescuentoVentaRequest": {
         "required": [
           "tipo",
@@ -6918,6 +7550,26 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "EmpleadoOperacionDto": {
+        "required": [
+          "id",
+          "nombre",
+          "cargo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string"
           }
         }
       },
@@ -7267,7 +7919,8 @@
       "GuardarMetodoPagoRequest": {
         "required": [
           "nombre",
-          "requiereReferencia"
+          "requiereReferencia",
+          "cuentaFinancieraId"
         ],
         "type": "object",
         "properties": {
@@ -7283,6 +7936,10 @@
           "esEfectivo": {
             "type": "boolean",
             "default": false
+          },
+          "cuentaFinancieraId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -7432,6 +8089,31 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ImpuestoOperacionDto": {
+        "required": [
+          "id",
+          "nombre",
+          "porcentaje"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "porcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -7823,6 +8505,8 @@
           "requiereReferencia",
           "esEfectivo",
           "activo",
+          "cuentaFinancieraId",
+          "cuentaFinancieraNombre",
           "fechaCreacionUtc",
           "fechaModificacionUtc"
         ],
@@ -7844,6 +8528,13 @@
           "activo": {
             "type": "boolean"
           },
+          "cuentaFinancieraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaFinancieraNombre": {
+            "type": "string"
+          },
           "fechaCreacionUtc": {
             "type": "string",
             "format": "date-time"
@@ -7854,6 +8545,30 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "MetodoPagoOperacionDto": {
+        "required": [
+          "id",
+          "nombre",
+          "requiereReferencia",
+          "esEfectivo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiereReferencia": {
+            "type": "boolean"
+          },
+          "esEfectivo": {
+            "type": "boolean"
           }
         }
       },
@@ -7957,6 +8672,120 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "MovimientoFinancieroDto": {
+        "required": [
+          "id",
+          "tipo",
+          "sentido",
+          "importe",
+          "codigoMoneda",
+          "concepto",
+          "fechaUtc",
+          "cajaId",
+          "metodoPagoId",
+          "ventaId",
+          "devolucionVentaId",
+          "liquidacionComisionId",
+          "transferenciaFinancieraId",
+          "usuarioId",
+          "migrado",
+          "saldoPosterior"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "sentido": {
+            "type": "string"
+          },
+          "importe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "codigoMoneda": {
+            "type": "string"
+          },
+          "concepto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fechaUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cajaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "metodoPagoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "ventaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "devolucionVentaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "liquidacionComisionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "transferenciaFinancieraId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "usuarioId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "migrado": {
+            "type": "boolean"
+          },
+          "saldoPosterior": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -8290,6 +9119,47 @@
           }
         }
       },
+      "PaginaCuentasFinancierasDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanoPagina",
+          "totalElementos"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CuentaFinancieraDto"
+            }
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tamanoPagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalElementos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PaginaEmpleadosDto": {
         "required": [
           "elementos",
@@ -8372,6 +9242,47 @@
           }
         }
       },
+      "PaginaMovimientosFinancierosDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanoPagina",
+          "totalElementos"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimientoFinancieroDto"
+            }
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tamanoPagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalElementos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PaginaMovimientosInventarioDto": {
         "required": [
           "elementos",
@@ -8404,6 +9315,47 @@
             "format": "int32"
           },
           "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PaginaProductosOperacionDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanoPagina",
+          "totalElementos"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductoOperacionDto"
+            }
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tamanoPagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalElementos": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -8623,6 +9575,8 @@
           "metodoPagoId",
           "metodoPagoNombre",
           "esEfectivo",
+          "cuentaFinancieraId",
+          "cuentaFinancieraNombre",
           "importe",
           "referencia"
         ],
@@ -8637,6 +9591,13 @@
           },
           "esEfectivo": {
             "type": "boolean"
+          },
+          "cuentaFinancieraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaFinancieraNombre": {
+            "type": "string"
           },
           "importe": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
@@ -8660,6 +9621,8 @@
           "metodoPagoId",
           "metodoPagoNombre",
           "esEfectivo",
+          "cuentaFinancieraId",
+          "cuentaFinancieraNombre",
           "importe",
           "referencia",
           "fechaUtc"
@@ -8679,6 +9642,13 @@
           },
           "esEfectivo": {
             "type": "boolean"
+          },
+          "cuentaFinancieraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaFinancieraNombre": {
+            "type": "string"
           },
           "importe": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
@@ -8780,6 +9750,60 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ProductoOperacionDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "unidadBase",
+          "manejaFraccion",
+          "existenciaActual",
+          "precioVenta",
+          "codigoMoneda"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "unidadBase": {
+            "type": "string"
+          },
+          "manejaFraccion": {
+            "type": "boolean"
+          },
+          "existenciaActual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "precioVenta": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "codigoMoneda": {
+            "type": "string"
           }
         }
       },
@@ -9080,6 +10104,40 @@
           }
         }
       },
+      "ResumenFinancieroDto": {
+        "required": [
+          "disponibleTotal",
+          "deudaTarjetasTotal",
+          "cuentasActivas"
+        ],
+        "type": "object",
+        "properties": {
+          "disponibleTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "deudaTarjetasTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "cuentasActivas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ServicioDto": {
         "required": [
           "id",
@@ -9149,6 +10207,69 @@
           }
         }
       },
+      "SolicitudCuentaFinanciera": {
+        "required": [
+          "nombre",
+          "tipo",
+          "codigoMoneda",
+          "entidad",
+          "ultimosDigitos",
+          "cupoCredito"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigoMoneda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "entidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ultimosDigitos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cupoCredito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "SolicitudEstadoCuentaFinanciera": {
+        "required": [
+          "activa"
+        ],
+        "type": "object",
+        "properties": {
+          "activa": {
+            "type": "boolean"
+          }
+        }
+      },
       "TotalReporteDto": {
         "required": [
           "nombre",
@@ -9159,7 +10280,7 @@
           "nombre": {
             "type": "string"
           },
-          "valor": { },
+          "valor": {},
           "codigoMoneda": {
             "type": [
               "null",
@@ -9420,6 +10541,9 @@
     },
     {
       "name": "Empleados"
+    },
+    {
+      "name": "Finanzas"
     },
     {
       "name": "Inventario"

@@ -245,7 +245,7 @@ public sealed class ExportadorReportes : IExportadorReportes
         "TotalServicios" or "ComisionesDevengadas" or "AjustesDevolucion" or
         "ComisionesNetas" or "EfectivoInicial" or "PagosVenta" or "IngresosManuales" or "Reembolsos" or
         "EgresosManuales" or "PagoComisiones" or "EfectivoEsperado" or "EfectivoContado" or "Diferencia" or
-        "BaseCalculo";
+        "BaseCalculo" or "Entrada" or "Salida" or "SaldoPosterior";
 
     private static bool EsTextoRiesgoso(string texto) =>
         texto.Length > 0 && texto[0] is '=' or '+' or '-' or '@' or '\t' or '\r' or '\n';

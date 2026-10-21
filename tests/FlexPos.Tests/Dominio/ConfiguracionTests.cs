@@ -69,7 +69,11 @@ public sealed class ConfiguracionTests
     [Fact]
     public void MetodoPago_PuedeDesactivarseSinEliminarse()
     {
-        var metodo = MetodoPagoConfigurado.Crear(Guid.CreateVersion7(), "Transferencia", true).Valor!;
+        var configuracionId = Guid.CreateVersion7();
+        var cuenta = CuentaFinanciera.Crear(
+            configuracionId, "Banco", TipoCuentaFinanciera.Banco, "COP", null, null, null).Valor!;
+        var metodo = MetodoPagoConfigurado.Crear(
+            configuracionId, "Transferencia", true, false, cuenta).Valor!;
 
         var resultado = metodo.EstablecerEstado(false);
 

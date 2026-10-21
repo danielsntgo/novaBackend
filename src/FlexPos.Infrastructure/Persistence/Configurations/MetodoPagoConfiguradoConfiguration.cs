@@ -16,6 +16,7 @@ public sealed class MetodoPagoConfiguradoConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.NombreNormalizado).HasColumnName("nombre_normalizado").HasMaxLength(80).IsRequired();
         builder.Property(x => x.RequiereReferencia).HasColumnName("requiere_referencia");
         builder.Property(x => x.EsEfectivo).HasColumnName("es_efectivo");
+        builder.Property(x => x.CuentaFinancieraId).HasColumnName("cuenta_financiera_id");
         builder.Property(x => x.Activo).HasColumnName("activo");
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.FechaModificacionUtc).HasColumnName("fecha_modificacion_utc").HasColumnType("timestamp with time zone");
@@ -32,6 +33,9 @@ public sealed class MetodoPagoConfiguradoConfiguration : IEntityTypeConfiguratio
         builder.HasOne<ConfiguracionNegocio>()
             .WithMany()
             .HasForeignKey(x => x.ConfiguracionNegocioId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.CuentaFinanciera).WithMany()
+            .HasForeignKey(x => x.CuentaFinancieraId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

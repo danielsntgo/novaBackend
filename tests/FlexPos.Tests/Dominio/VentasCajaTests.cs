@@ -35,8 +35,10 @@ public sealed class VentasCajaTests
             cajaId, null, null, null, DateTimeOffset.UtcNow, "COP", null, 0m, [linea]).Valor!;
         var configuracion = ConfiguracionNegocio.Crear(
             "Negocio", null, null, null, null, null, "COP", false, false).Valor!;
-        var efectivo = MetodoPagoConfigurado.Crear(configuracion.Id, "Efectivo", false, true).Valor!;
-        var pago = PagoVenta.Crear(venta.Id, cajaId, efectivo, 100m, null).Valor!;
+        var cuenta = CuentaFinanciera.Crear(
+            configuracion.Id, "Caja principal", TipoCuentaFinanciera.Efectivo, "COP", null, null, null).Valor!;
+        var efectivo = MetodoPagoConfigurado.Crear(configuracion.Id, "Efectivo", false, true, cuenta).Valor!;
+        var pago = PagoVenta.Crear(venta.Id, cajaId, efectivo, cuenta, 100m, null).Valor!;
 
         Assert.True(venta.RegistrarPago(pago).EsExitoso);
         Assert.Equal(100m, venta.TotalPendiente);
@@ -58,7 +60,7 @@ public sealed class VentasCajaTests
     [Fact]
     public void Caja_ArqueaDiferenciaYNoPermiteCerrarDosVeces()
     {
-        var caja = Caja.Abrir(50000m, DateTimeOffset.UtcNow, Guid.NewGuid()).Valor!;
+        var caja = Caja.Abrir(Guid.CreateVersion7(), 50000m, DateTimeOffset.UtcNow, Guid.NewGuid()).Valor!;
         var resultado = caja.Cerrar(74900m, 75000m, DateTimeOffset.UtcNow, Guid.NewGuid());
 
         Assert.True(resultado.EsExitoso);

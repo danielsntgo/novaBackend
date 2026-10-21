@@ -155,6 +155,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creado_por_id");
 
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
+
                     b.Property<decimal?>("DiferenciaCierre")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -216,6 +220,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CuentaFinancieraId");
 
                     b.HasIndex("Estado")
                         .IsUnique()
@@ -728,6 +734,101 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasFilter("es_principal = true");
 
                     b.ToTable("configuracion_negocio", "flexpos");
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.CuentaFinanciera", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<string>("CodigoMoneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("codigo_moneda");
+
+                    b.Property<Guid>("ConfiguracionNegocioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("configuracion_negocio_id");
+
+                    b.Property<Guid?>("CreadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_id");
+
+                    b.Property<decimal?>("CupoCredito")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("cupo_credito");
+
+                    b.Property<string>("Entidad")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("entidad");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaModificacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion_utc");
+
+                    b.Property<Guid?>("ModificadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modificado_por_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("NombreNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nombre_normalizado");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("tipo");
+
+                    b.Property<string>("UltimosDigitos")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("ultimos_digitos");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfiguracionNegocioId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cuentas_financieras_efectivo_activa")
+                        .HasFilter("tipo = 'Efectivo' AND activa = true");
+
+                    b.HasIndex("ConfiguracionNegocioId", "NombreNormalizado")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cuentas_financieras_configuracion_nombre");
+
+                    b.HasIndex("ConfiguracionNegocioId", "Tipo")
+                        .HasDatabaseName("ix_cuentas_financieras_tipo");
+
+                    b.ToTable("cuentas_financieras", "flexpos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cuentas_financieras_cupo", "cupo_credito IS NULL OR cupo_credito > 0");
+                        });
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.DetalleCompra", b =>
@@ -1445,6 +1546,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creado_por_id");
 
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
+
                     b.Property<bool>("EsEfectivo")
                         .HasColumnType("boolean")
                         .HasColumnName("es_efectivo");
@@ -1490,6 +1595,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_metodos_pago_unico_efectivo")
                         .HasFilter("es_efectivo = true");
 
+                    b.HasIndex("CuentaFinancieraId");
+
                     b.HasIndex("ConfiguracionNegocioId", "NombreNormalizado")
                         .IsUnique()
                         .HasDatabaseName("ux_metodos_pago_configuracion_nombre");
@@ -1497,13 +1604,13 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.ToTable("metodos_pago", "flexpos");
                 });
 
-            modelBuilder.Entity("FlexPos.Domain.Entities.MovimientoCaja", b =>
+            modelBuilder.Entity("FlexPos.Domain.Entities.MovimientoFinanciero", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<Guid>("CajaId")
+                    b.Property<Guid?>("CajaId")
                         .HasColumnType("uuid")
                         .HasColumnName("caja_id");
 
@@ -1513,6 +1620,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("codigo_moneda");
 
+                    b.Property<Guid?>("CompraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("compra_id");
+
                     b.Property<string>("Concepto")
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)")
@@ -1521,6 +1632,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreadoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("creado_por_id");
+
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
 
                     b.Property<Guid?>("DevolucionVentaId")
                         .HasColumnType("uuid")
@@ -1534,6 +1649,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_modificacion_utc");
 
+                    b.Property<DateTimeOffset>("FechaUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_utc");
+
                     b.Property<decimal>("Importe")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -1543,15 +1662,33 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("liquidacion_comision_id");
 
+                    b.Property<Guid?>("MetodoPagoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("metodo_pago_id");
+
+                    b.Property<bool>("Migrado")
+                        .HasColumnType("boolean")
+                        .HasColumnName("migrado");
+
                     b.Property<Guid?>("ModificadoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("modificado_por_id");
 
+                    b.Property<string>("Sentido")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("sentido");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("tipo");
+
+                    b.Property<Guid?>("TransferenciaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transferencia_financiera_id");
 
                     b.Property<Guid?>("VentaId")
                         .HasColumnType("uuid")
@@ -1565,18 +1702,30 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DevolucionVentaId");
+                    b.HasIndex("CajaId")
+                        .HasDatabaseName("ix_movimientos_financieros_caja");
 
-                    b.HasIndex("LiquidacionComisionId");
+                    b.HasIndex("CompraId");
 
-                    b.HasIndex("VentaId");
+                    b.HasIndex("DevolucionVentaId")
+                        .HasDatabaseName("ix_movimientos_financieros_devolucion");
 
-                    b.HasIndex("CajaId", "FechaCreacionUtc")
-                        .HasDatabaseName("ix_movimientos_caja_fecha");
+                    b.HasIndex("LiquidacionComisionId")
+                        .HasDatabaseName("ix_movimientos_financieros_liquidacion");
 
-                    b.ToTable("movimientos_caja", "flexpos", t =>
+                    b.HasIndex("MetodoPagoId");
+
+                    b.HasIndex("TransferenciaFinancieraId");
+
+                    b.HasIndex("VentaId")
+                        .HasDatabaseName("ix_movimientos_financieros_venta");
+
+                    b.HasIndex("CuentaFinancieraId", "FechaUtc", "Id")
+                        .HasDatabaseName("ix_movimientos_financieros_cuenta_fecha");
+
+                    b.ToTable("movimientos_financieros", "flexpos", t =>
                         {
-                            t.HasCheckConstraint("ck_movimientos_caja_importe", "importe > 0");
+                            t.HasCheckConstraint("ck_movimientos_financieros_importe", "importe > 0");
                         });
                 });
 
@@ -1736,6 +1885,16 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creado_por_id");
 
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
+
+                    b.Property<string>("CuentaFinancieraNombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("cuenta_financiera_nombre");
+
                     b.Property<Guid>("DevolucionVentaId")
                         .HasColumnType("uuid")
                         .HasColumnName("devolucion_venta_id");
@@ -1784,6 +1943,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CuentaFinancieraId");
+
                     b.HasIndex("DevolucionVentaId");
 
                     b.HasIndex("MetodoPagoId");
@@ -1807,6 +1968,16 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreadoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("creado_por_id");
+
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
+
+                    b.Property<string>("CuentaFinancieraNombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("cuenta_financiera_nombre");
 
                     b.Property<bool>("EsEfectivo")
                         .HasColumnType("boolean")
@@ -1857,6 +2028,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CajaId");
+
+                    b.HasIndex("CuentaFinancieraId");
 
                     b.HasIndex("MetodoPagoId");
 
@@ -2161,6 +2334,82 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tokens_renovacion_usuario_activos");
 
                     b.ToTable("tokens_renovacion", "flexpos");
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.TransferenciaFinanciera", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodigoMoneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("codigo_moneda");
+
+                    b.Property<string>("Concepto")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("concepto");
+
+                    b.Property<Guid?>("CreadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_id");
+
+                    b.Property<Guid>("CuentaDestinoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_destino_id");
+
+                    b.Property<Guid>("CuentaOrigenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_origen_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaModificacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion_utc");
+
+                    b.Property<DateTimeOffset>("FechaUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_utc");
+
+                    b.Property<decimal>("Importe")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("importe");
+
+                    b.Property<Guid?>("ModificadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modificado_por_id");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("referencia");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CuentaDestinoId");
+
+                    b.HasIndex("CuentaOrigenId");
+
+                    b.HasIndex("FechaUtc")
+                        .HasDatabaseName("ix_transferencias_financieras_fecha");
+
+                    b.ToTable("transferencias_financieras", "flexpos", t =>
+                        {
+                            t.HasCheckConstraint("ck_transferencias_financieras_importe", "importe > 0");
+                        });
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.Venta", b =>
@@ -2647,6 +2896,15 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.Navigation("PrecioVenta");
                 });
 
+            modelBuilder.Entity("FlexPos.Domain.Entities.Caja", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FlexPos.Domain.Entities.Cita", b =>
                 {
                     b.HasOne("FlexPos.Domain.Entities.Cliente", "Cliente")
@@ -2676,7 +2934,7 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FlexPos.Domain.Entities.Comision", b =>
                 {
-                    b.HasOne("FlexPos.Domain.Entities.Comision", null)
+                    b.HasOne("FlexPos.Domain.Entities.Comision", "ComisionOriginal")
                         .WithMany()
                         .HasForeignKey("ComisionOriginalId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -2714,6 +2972,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasForeignKey("VentaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ComisionOriginal");
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.Compra", b =>
@@ -2725,6 +2985,15 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Proveedor");
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.CuentaFinanciera", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.ConfiguracionNegocio", null)
+                        .WithMany()
+                        .HasForeignKey("ConfiguracionNegocioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.DetalleCompra", b =>
@@ -2925,13 +3194,31 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ConfiguracionNegocioId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", "CuentaFinanciera")
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CuentaFinanciera");
                 });
 
-            modelBuilder.Entity("FlexPos.Domain.Entities.MovimientoCaja", b =>
+            modelBuilder.Entity("FlexPos.Domain.Entities.MovimientoFinanciero", b =>
                 {
                     b.HasOne("FlexPos.Domain.Entities.Caja", null)
                         .WithMany()
                         .HasForeignKey("CajaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlexPos.Domain.Entities.Compra", null)
+                        .WithMany()
+                        .HasForeignKey("CompraId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2943,6 +3230,16 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.HasOne("FlexPos.Domain.Entities.LiquidacionComision", null)
                         .WithMany()
                         .HasForeignKey("LiquidacionComisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlexPos.Domain.Entities.MetodoPagoConfigurado", null)
+                        .WithMany()
+                        .HasForeignKey("MetodoPagoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FlexPos.Domain.Entities.TransferenciaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("TransferenciaFinancieraId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FlexPos.Domain.Entities.Venta", null)
@@ -3024,6 +3321,12 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FlexPos.Domain.Entities.PagoDevolucionVenta", b =>
                 {
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("FlexPos.Domain.Entities.DevolucionVenta", null)
                         .WithMany("Pagos")
                         .HasForeignKey("DevolucionVentaId")
@@ -3042,6 +3345,12 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.HasOne("FlexPos.Domain.Entities.Caja", null)
                         .WithMany()
                         .HasForeignKey("CajaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -3109,6 +3418,21 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.TransferenciaFinanciera", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaDestinoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaOrigenId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

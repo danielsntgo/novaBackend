@@ -262,6 +262,21 @@ public sealed class ServicioComisiones(
                 "comision.saldo_no_pagable", "Los ajustes pendientes igualan o superan las comisiones seleccionadas."));
         }
 
+        var cuenta = await unidad.BloquearCuentaFinancieraAsync(metodo.CuentaFinancieraId, cancellationToken);
+        if (cuenta is null || !cuenta.Activa || cuenta.ConfiguracionNegocioId != configuracion.Id ||
+            cuenta.CodigoMoneda != configuracion.CodigoMoneda || !metodo.EsCompatibleConCuenta(cuenta))
+        {
+            return Resultado<LiquidacionComisionDto>.Fallo(new ErrorDominio(
+                "cuenta_financiera.conflicto", "La cuenta asignada al método de pago ya no está disponible."));
+        }
+
+        var saldoCuenta = await unidad.CalcularSaldoCuentaAsync(cuenta.Id, cancellationToken);
+        var saldoValidado = cuenta.ValidarSaldo(saldoCuenta - importeNeto);
+        if (!saldoValidado.EsExitoso)
+        {
+            return Resultado<LiquidacionComisionDto>.Fallo(saldoValidado.Error!);
+        }
+
         var liquidacion = LiquidacionComision.Crear(
             empleadoId, metodo, importeNeto, configuracion.CodigoMoneda, solicitud.Referencia,
             caja?.Id, reloj.GetUtcNow());
@@ -276,18 +291,17 @@ public sealed class ServicioComisiones(
             comision.MarcarPagada(liquidacion.Valor!.Id);
         }
 
-        if (metodo.EsEfectivo)
+        var movimiento = MovimientoFinanciero.Crear(
+            cuenta.Id, TipoMovimientoFinanciero.PagoComision, SentidoMovimientoFinanciero.Salida,
+            importeNeto, configuracion.CodigoMoneda, reloj.GetUtcNow(),
+            "Liquidación de comisiones", metodo.EsEfectivo ? caja!.Id : null, metodo.Id,
+            liquidacionComisionId: liquidacion.Valor!.Id);
+        if (!movimiento.EsExitoso)
         {
-            var movimiento = MovimientoCaja.Crear(
-                caja!.Id, TipoMovimientoCaja.PagoComision, importeNeto, configuracion.CodigoMoneda,
-                "Liquidación de comisiones", liquidacionComisionId: liquidacion.Valor!.Id);
-            if (!movimiento.EsExitoso)
-            {
-                return Resultado<LiquidacionComisionDto>.Fallo(movimiento.Error!);
-            }
-
-            unidad.Agregar(movimiento.Valor!);
+            return Resultado<LiquidacionComisionDto>.Fallo(movimiento.Error!);
         }
+
+        unidad.Agregar(movimiento.Valor!);
 
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
         {

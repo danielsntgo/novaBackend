@@ -8,6 +8,7 @@ namespace FlexPos.Application.Services;
 
 public sealed class ServicioConfiguracion(
     IRepositorioConfiguracion repositorio,
+    IRepositorioFinanzas finanzas,
     IRepositorioServicios servicios,
     IRepositorioInventario inventario,
     IRepositorioCompras compras)
@@ -48,12 +49,29 @@ public sealed class ServicioConfiguracion(
 
             configuracion = nueva.Valor!;
             repositorio.Agregar(configuracion);
+            var efectivoBase = CuentaFinanciera.Crear(
+                configuracion.Id, "Caja principal", TipoCuentaFinanciera.Efectivo,
+                configuracion.CodigoMoneda, null, null, null);
+            var porAsignarBase = CuentaFinanciera.Crear(
+                configuracion.Id, "Cuenta por asignar", TipoCuentaFinanciera.Otro,
+                configuracion.CodigoMoneda, null, null, null);
+            if (!efectivoBase.EsExitoso || !porAsignarBase.EsExitoso)
+            {
+                return Resultado<ConfiguracionNegocioDto>.Fallo(
+                    efectivoBase.Error ?? porAsignarBase.Error!);
+            }
+
+            finanzas.Agregar(efectivoBase.Valor!);
+            finanzas.Agregar(porAsignarBase.Valor!);
         }
         else
         {
             var monedaSolicitada = solicitud.CodigoMoneda?.Trim().ToUpperInvariant();
-            if (EsCodigoMonedaValido(monedaSolicitada) &&
-                !string.Equals(configuracion.CodigoMoneda, monedaSolicitada, StringComparison.Ordinal) &&
+            var cambiaMoneda = EsCodigoMonedaValido(monedaSolicitada) &&
+                               !string.Equals(configuracion.CodigoMoneda, monedaSolicitada, StringComparison.Ordinal);
+            CuentaFinanciera? cuentaEfectivoBase = null;
+            CuentaFinanciera? cuentaPorAsignarBase = null;
+            if (cambiaMoneda &&
                 (await servicios.ExisteAlgunoAsync(cancellationToken) ||
                  await inventario.ExisteAlgunoAsync(cancellationToken) ||
                  await compras.ExisteAlgunaAsync(cancellationToken) ||
@@ -62,6 +80,29 @@ public sealed class ServicioConfiguracion(
                 return Resultado<ConfiguracionNegocioDto>.Fallo(new ErrorDominio(
                     "configuracion.moneda_conflicto",
                     "No se puede cambiar la moneda mientras existan servicios, articulos, compras, cajas o ventas registradas."));
+            }
+
+            if (cambiaMoneda)
+            {
+                cuentaEfectivoBase = await finanzas.ObtenerCuentaBaseAsync(
+                    configuracion.Id, TipoCuentaFinanciera.Efectivo, ServicioFinanzas.CuentaEfectivoBase, cancellationToken);
+                cuentaPorAsignarBase = await finanzas.ObtenerCuentaBaseAsync(
+                    configuracion.Id, TipoCuentaFinanciera.Otro, "Cuenta por asignar", cancellationToken);
+                if (cuentaEfectivoBase is null || cuentaPorAsignarBase is null)
+                {
+                    return Resultado<ConfiguracionNegocioDto>.Fallo(new ErrorDominio(
+                        "configuracion.moneda_conflicto",
+                        "No se encontraron las cuentas financieras base para actualizar la moneda."));
+                }
+
+                var metodos = await repositorio.ListarMetodosPagoAsync(configuracion.Id, cancellationToken);
+                if (metodos.Any(x => x.CuentaFinancieraId != cuentaEfectivoBase.Id &&
+                                     x.CuentaFinancieraId != cuentaPorAsignarBase.Id))
+                {
+                    return Resultado<ConfiguracionNegocioDto>.Fallo(new ErrorDominio(
+                        "configuracion.moneda_conflicto",
+                        "No se puede cambiar la moneda mientras un método use una cuenta financiera personalizada."));
+                }
             }
 
             var actualizacion = configuracion.Actualizar(
@@ -81,6 +122,20 @@ public sealed class ServicioConfiguracion(
             if (!actualizacion.EsExitoso)
             {
                 return Resultado<ConfiguracionNegocioDto>.Fallo(actualizacion.Error!);
+            }
+
+            if (cambiaMoneda)
+            {
+                foreach (var cuenta in new[] { cuentaEfectivoBase!, cuentaPorAsignarBase! })
+                {
+                    var cambioCuenta = cuenta.Actualizar(
+                        cuenta.Nombre, cuenta.Tipo, configuracion.CodigoMoneda, cuenta.Entidad,
+                        cuenta.UltimosDigitos, cuenta.CupoCredito, tieneDependencias: false, saldoActual: 0m);
+                    if (!cambioCuenta.EsExitoso)
+                    {
+                        return Resultado<ConfiguracionNegocioDto>.Fallo(cambioCuenta.Error!);
+                    }
+                }
             }
         }
 
@@ -207,8 +262,16 @@ public sealed class ServicioConfiguracion(
                 "metodo_pago.efectivo_duplicado", "Solo puede haber un método de pago marcado como efectivo."));
         }
 
+        var cuenta = await finanzas.ObtenerCuentaAsync(
+            configuracion.Id, solicitud.CuentaFinancieraId, cancellationToken);
+        if (cuenta is null || !cuenta.Activa || cuenta.CodigoMoneda != configuracion.CodigoMoneda)
+        {
+            return Resultado<MetodoPagoDto>.Fallo(new ErrorDominio(
+                "metodo_pago.cuenta_invalida", "La cuenta debe existir, estar activa y usar la moneda del negocio."));
+        }
+
         var nuevo = MetodoPagoConfigurado.Crear(
-            configuracion.Id, solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo);
+            configuracion.Id, solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo, cuenta);
         if (!nuevo.EsExitoso)
         {
             return Resultado<MetodoPagoDto>.Fallo(nuevo.Error!);
@@ -236,7 +299,17 @@ public sealed class ServicioConfiguracion(
                 "metodo_pago.efectivo_duplicado", "Solo puede haber un método de pago marcado como efectivo."));
         }
 
-        var resultado = metodo.Actualizar(solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo);
+        var cuenta = await finanzas.ObtenerCuentaAsync(
+            metodo.ConfiguracionNegocioId, solicitud.CuentaFinancieraId, cancellationToken);
+        var configuracion = await repositorio.ObtenerPrincipalAsync(cancellationToken);
+        if (cuenta is null || !cuenta.Activa || configuracion is null || cuenta.CodigoMoneda != configuracion.CodigoMoneda)
+        {
+            return Resultado<MetodoPagoDto>.Fallo(new ErrorDominio(
+                "metodo_pago.cuenta_invalida", "La cuenta debe existir, estar activa y usar la moneda del negocio."));
+        }
+
+        var resultado = metodo.Actualizar(
+            solicitud.Nombre, solicitud.RequiereReferencia, solicitud.EsEfectivo, cuenta);
         if (!resultado.EsExitoso)
         {
             return Resultado<MetodoPagoDto>.Fallo(resultado.Error!);
@@ -383,6 +456,7 @@ public sealed class ServicioConfiguracion(
 
     private static MetodoPagoDto Convertir(MetodoPagoConfigurado entidad) => new(
         entidad.Id, entidad.Nombre, entidad.RequiereReferencia, entidad.EsEfectivo, entidad.Activo,
+        entidad.CuentaFinancieraId, entidad.CuentaFinanciera.Nombre,
         entidad.FechaCreacionUtc, entidad.FechaModificacionUtc);
 
     private static NumeracionDocumentoDto Convertir(NumeracionDocumento entidad) => new(

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FlexPos.Application.DTOs.Autenticacion;
 using FlexPos.Application.DTOs.Caja;
+using FlexPos.Application.DTOs.Finanzas;
 using FlexPos.Application.DTOs.Inventario;
 using FlexPos.Application.DTOs.Ventas;
 using FlexPos.Infrastructure.Persistence;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace FlexPos.Tests.Integracion;
@@ -79,15 +81,42 @@ public sealed class VentasPostgreSqlTests
         Assert.Equal(HttpStatusCode.OK, respuestaConfiguracion.StatusCode);
 
         var sufijo = Guid.NewGuid().ToString("N")[..10];
+        Guid cuentaEfectivoId;
+        await using (var scope = fabrica.Services.CreateAsyncScope())
+        {
+            var contexto = scope.ServiceProvider.GetRequiredService<FlexPosDbContext>();
+            cuentaEfectivoId = await contexto.CuentasFinancieras
+                .Where(x => x.Nombre == "Caja principal").Select(x => x.Id).SingleAsync();
+        }
+
         using var crearEfectivo = CrearSolicitud(HttpMethod.Post, "/api/configuracion/metodos-pago", sesion.TokenAcceso,
-            new { nombre = $"Efectivo {sufijo}", requiereReferencia = false, esEfectivo = true });
+            new
+            {
+                nombre = $"Efectivo {sufijo}", requiereReferencia = false,
+                cuentaFinancieraId = cuentaEfectivoId, esEfectivo = true
+            });
         using var respuestaEfectivo = await cliente.SendAsync(crearEfectivo);
         Assert.Equal(HttpStatusCode.Created, respuestaEfectivo.StatusCode);
         var efectivo = await respuestaEfectivo.Content.ReadFromJsonAsync<FlexPos.Application.DTOs.Configuracion.MetodoPagoDto>();
         Assert.NotNull(efectivo);
 
+        using var crearBanco = CrearSolicitud(HttpMethod.Post, "/api/finanzas/cuentas", sesion.TokenAcceso,
+            new
+            {
+                nombre = $"Banco ventas {sufijo}", tipo = "Banco", codigoMoneda = "COP",
+                entidad = "Banco de prueba", ultimosDigitos = (string?)null, cupoCredito = (decimal?)null
+            });
+        using var respuestaBanco = await cliente.SendAsync(crearBanco);
+        Assert.Equal(HttpStatusCode.Created, respuestaBanco.StatusCode);
+        var banco = await respuestaBanco.Content.ReadFromJsonAsync<CuentaFinancieraDto>();
+        Assert.NotNull(banco);
+
         using var crearTransferencia = CrearSolicitud(HttpMethod.Post, "/api/configuracion/metodos-pago", sesion.TokenAcceso,
-            new { nombre = $"Transferencia {sufijo}", requiereReferencia = true, esEfectivo = false });
+            new
+            {
+                nombre = $"Tarjeta {sufijo}", requiereReferencia = true, esEfectivo = false,
+                cuentaFinancieraId = banco.Id
+            });
         using var respuestaTransferencia = await cliente.SendAsync(crearTransferencia);
         Assert.Equal(HttpStatusCode.Created, respuestaTransferencia.StatusCode);
         var transferencia = await respuestaTransferencia.Content.ReadFromJsonAsync<FlexPos.Application.DTOs.Configuracion.MetodoPagoDto>();
@@ -166,6 +195,9 @@ public sealed class VentasPostgreSqlTests
         Assert.Contains(venta.Documentos, x => x.TipoDocumento == "Comprobante");
         Assert.Contains(venta.Documentos, x => x.TipoDocumento == "Factura");
         Assert.Single(venta.Pagos, x => x.EsEfectivo);
+        var pagoTarjeta = Assert.Single(venta.Pagos, x => !x.EsEfectivo);
+        Assert.Equal(banco.Id, pagoTarjeta.CuentaFinancieraId);
+        Assert.Equal(banco.Nombre, pagoTarjeta.CuentaFinancieraNombre);
 
         using var pdf = await cliente.GetAsync($"/api/ventas/{venta.Id}/comprobante.pdf");
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
@@ -186,6 +218,21 @@ public sealed class VentasPostgreSqlTests
         Assert.Equal(0m, ventaPagada.TotalPendiente);
 
         var idLinea = venta.Lineas.Single().Id;
+        using var reembolsoSinSaldo = CrearSolicitud(
+            HttpMethod.Post, $"/api/ventas/{venta.Id}/devoluciones", sesion.TokenAcceso,
+            new
+            {
+                motivo = "Prueba de fondos insuficientes",
+                lineas = new[] { new { detalleVentaId = idLinea, cantidad = 1m } },
+                pagos = new[]
+                {
+                    new { metodoPagoId = transferencia.Id, importe = 4000m, referencia = (string?)"DEV-TEST-1" },
+                    new { metodoPagoId = transferencia.Id, importe = 4550m, referencia = (string?)"DEV-TEST-2" }
+                }
+            });
+        using var respuestaReembolsoSinSaldo = await cliente.SendAsync(reembolsoSinSaldo);
+        Assert.Equal(HttpStatusCode.Conflict, respuestaReembolsoSinSaldo.StatusCode);
+
         using var devolucionParcial = CrearSolicitud(
             HttpMethod.Post, $"/api/ventas/{venta.Id}/devoluciones", sesion.TokenAcceso,
             new
@@ -204,6 +251,8 @@ public sealed class VentasPostgreSqlTests
         Assert.NotNull(ventaDevuelta);
         Assert.Equal("ParcialmenteDevuelta", ventaDevuelta.Estado);
         Assert.Equal(8550m, ventaDevuelta.TotalDevuelto);
+        var reembolsoTarjeta = Assert.Single(ventaDevuelta.Devoluciones.Single().Pagos, x => !x.EsEfectivo);
+        Assert.Equal(banco.Id, reembolsoTarjeta.CuentaFinancieraId);
 
         using var anular = CrearSolicitud(HttpMethod.Post, $"/api/ventas/{venta.Id}/anular", sesion.TokenAcceso,
             new
@@ -222,6 +271,33 @@ public sealed class VentasPostgreSqlTests
         Assert.Equal("Anulada", ventaAnulada.Estado);
         Assert.Equal(17100m, ventaAnulada.TotalDevuelto);
         Assert.Equal(2, ventaAnulada.Devoluciones.Count);
+        Assert.All(ventaAnulada.Devoluciones.SelectMany(x => x.Pagos).Where(x => !x.EsEfectivo), pago =>
+        {
+            Assert.Equal(banco.Id, pago.CuentaFinancieraId);
+            Assert.Equal(banco.Nombre, pago.CuentaFinancieraNombre);
+        });
+
+        using var obtenerBanco = new HttpRequestMessage(HttpMethod.Get, $"/api/finanzas/cuentas/{banco.Id}");
+        obtenerBanco.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sesion.TokenAcceso);
+        using var respuestaBancoActual = await cliente.SendAsync(obtenerBanco);
+        Assert.Equal(HttpStatusCode.OK, respuestaBancoActual.StatusCode);
+        var bancoActual = await respuestaBancoActual.Content.ReadFromJsonAsync<CuentaFinancieraDto>();
+        Assert.NotNull(bancoActual);
+        Assert.Equal(0m, bancoActual.Saldo);
+
+        using var obtenerMovimientosBanco = new HttpRequestMessage(HttpMethod.Get,
+            $"/api/finanzas/cuentas/{banco.Id}/movimientos?tamanoPagina=100");
+        obtenerMovimientosBanco.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sesion.TokenAcceso);
+        using var respuestaMovimientosBanco = await cliente.SendAsync(obtenerMovimientosBanco);
+        Assert.Equal(HttpStatusCode.OK, respuestaMovimientosBanco.StatusCode);
+        var movimientosBanco = await respuestaMovimientosBanco.Content.ReadFromJsonAsync<PaginaMovimientosFinancierosDto>();
+        Assert.NotNull(movimientosBanco);
+        Assert.Equal(4, movimientosBanco.TotalElementos);
+        Assert.Equal(2, movimientosBanco.Elementos.Count(x => x.Tipo == "PagoVenta" &&
+            x.Sentido == "Entrada" && x.VentaId == venta.Id && x.MetodoPagoId == transferencia.Id &&
+            x.CajaId is null));
+        Assert.Equal(2, movimientosBanco.Elementos.Count(x => x.Tipo == "Reembolso" &&
+            x.Sentido == "Salida" && x.MetodoPagoId == transferencia.Id && x.CajaId is null));
 
         var inventarioFinal = await cliente.GetFromJsonAsync<PaginaArticulosInventarioDto>(
             $"/api/inventario/articulos?buscar=SKU-{sufijo}");

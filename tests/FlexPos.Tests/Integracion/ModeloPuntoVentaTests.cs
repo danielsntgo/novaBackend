@@ -20,7 +20,9 @@ public sealed class ModeloPuntoVentaTests
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.Contains("cajas", tablas);
-        Assert.Contains("movimientos_caja", tablas);
+        Assert.Contains("cuentas_financieras", tablas);
+        Assert.Contains("movimientos_financieros", tablas);
+        Assert.DoesNotContain("movimientos_caja", tablas);
         Assert.Contains("ventas", tablas);
         Assert.Contains("detalles_venta", tablas);
         Assert.Contains("documentos_venta", tablas);

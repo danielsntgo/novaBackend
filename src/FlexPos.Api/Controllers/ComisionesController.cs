@@ -130,7 +130,9 @@ public sealed class ComisionesController(ServicioComisiones servicio) : Controll
             "comision.regla_no_encontrada" or "comision.liquidacion_no_encontrada" => StatusCodes.Status404NotFound,
             "comision.regla_existente" or "comision.referencia_inactiva" or "comision.conflicto" or
                 "comision.metodo_pago_inactivo" or "comision.seleccion_invalida" or
-                "comision.saldo_no_pagable" or "caja.no_abierta" => StatusCodes.Status409Conflict,
+                "comision.saldo_no_pagable" or "caja.no_abierta" or
+                "cuenta_financiera.saldo_insuficiente" or "cuenta_financiera.conflicto" =>
+                StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest
         };
         return Problem(statusCode: estado, title: error.Mensaje, type: $"urn:flexpos:error:{error.Codigo}");

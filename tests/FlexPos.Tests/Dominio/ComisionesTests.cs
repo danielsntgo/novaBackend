@@ -66,16 +66,20 @@ public sealed class ComisionesTests
     }
 
     [Fact]
-    public void MovimientoCaja_PagoComisionRequiereLiquidacionYSeReferenciaAEsta()
+    public void MovimientoFinanciero_PagoComisionRequiereMetodoYLiquidacion()
     {
-        var cajaId = Guid.NewGuid();
-        var liquidacionId = Guid.NewGuid();
+        var cuentaId = Guid.CreateVersion7();
+        var cajaId = Guid.CreateVersion7();
+        var metodoId = Guid.CreateVersion7();
+        var liquidacionId = Guid.CreateVersion7();
 
-        var resultado = MovimientoCaja.Crear(
-            cajaId, TipoMovimientoCaja.PagoComision, 250m, "COP", "Liquidación",
+        var resultado = MovimientoFinanciero.Crear(
+            cuentaId, TipoMovimientoFinanciero.PagoComision, SentidoMovimientoFinanciero.Salida,
+            250m, "COP", DateTimeOffset.UtcNow, "Liquidación", cajaId, metodoId,
             liquidacionComisionId: liquidacionId);
-        var sinReferencia = MovimientoCaja.Crear(
-            cajaId, TipoMovimientoCaja.PagoComision, 250m, "COP", "Liquidación");
+        var sinReferencia = MovimientoFinanciero.Crear(
+            cuentaId, TipoMovimientoFinanciero.PagoComision, SentidoMovimientoFinanciero.Salida,
+            250m, "COP", DateTimeOffset.UtcNow, "Liquidación", cajaId);
 
         Assert.True(resultado.EsExitoso);
         Assert.Equal(liquidacionId, resultado.Valor!.LiquidacionComisionId);

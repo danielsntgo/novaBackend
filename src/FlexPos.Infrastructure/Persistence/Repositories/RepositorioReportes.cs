@@ -19,6 +19,7 @@ public sealed partial class RepositorioReportes(FlexPosDbContext contexto) : IRe
             "clientes" => ClientesAsync(filtros, cancellationToken),
             "empleados" => EmpleadosAsync(filtros, cancellationToken),
             "comisiones" => ComisionesAsync(filtros, cancellationToken),
+            "cuentas" => CuentasAsync(filtros, cancellationToken),
             _ => throw new InvalidOperationException("Tipo de reporte no validado.")
         };
 

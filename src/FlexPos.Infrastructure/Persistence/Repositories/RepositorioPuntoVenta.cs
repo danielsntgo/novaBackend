@@ -21,12 +21,12 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
     public Task<Caja?> ObtenerCajaAsync(Guid id, CancellationToken cancellationToken) =>
         contexto.Cajas.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<MovimientoCaja>> ObtenerMovimientosCajaAsync(
+    public async Task<IReadOnlyList<MovimientoFinanciero>> ObtenerMovimientosCajaAsync(
         Guid cajaId,
         CancellationToken cancellationToken) =>
-        await contexto.MovimientosCaja.AsNoTracking()
+        await contexto.MovimientosFinancieros.AsNoTracking()
             .Where(x => x.CajaId == cajaId)
-            .OrderBy(x => x.FechaCreacionUtc)
+            .OrderBy(x => x.FechaUtc)
             .ThenBy(x => x.Id)
             .ToArrayAsync(cancellationToken);
 
@@ -137,20 +137,61 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
             return await db.Cajas.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public async Task<CuentaFinanciera?> BloquearCuentaFinancieraAsync(Guid id, CancellationToken cancellationToken)
+        {
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.cuentas_financieras WHERE id = @id FOR UPDATE",
+                cancellationToken,
+                ("id", id));
+            var cuenta = await db.CuentasFinancieras.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (cuenta is not null)
+            {
+                await db.Entry(cuenta).ReloadAsync(cancellationToken);
+            }
+
+            return cuenta;
+        }
+
+        public async Task<CuentaFinanciera?> BloquearCuentaBaseAsync(
+            Guid configuracionId,
+            TipoCuentaFinanciera tipo,
+            string nombre,
+            CancellationToken cancellationToken)
+        {
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.cuentas_financieras WHERE configuracion_negocio_id = @configuracionId AND tipo = @tipo AND nombre = @nombre FOR UPDATE",
+                cancellationToken,
+                ("configuracionId", configuracionId),
+                ("tipo", tipo.ToString()),
+                ("nombre", nombre));
+            return await db.CuentasFinancieras.SingleOrDefaultAsync(
+                x => x.ConfiguracionNegocioId == configuracionId && x.Tipo == tipo && x.Nombre == nombre,
+                cancellationToken);
+        }
+
+        public async Task<decimal> CalcularSaldoCuentaAsync(Guid cuentaId, CancellationToken cancellationToken)
+        {
+            var movimientos = await db.MovimientosFinancieros.AsNoTracking()
+                .Where(x => x.CuentaFinancieraId == cuentaId)
+                .Select(x => new { x.Sentido, x.Importe })
+                .ToArrayAsync(cancellationToken);
+            return movimientos.Sum(x => x.Sentido == SentidoMovimientoFinanciero.Entrada
+                ? x.Importe
+                : -x.Importe);
+        }
+
         public async Task<decimal> CalcularEfectivoEsperadoAsync(Guid cajaId, CancellationToken cancellationToken)
         {
-            var movimientos = await db.MovimientosCaja.AsNoTracking()
+            var movimientos = await db.MovimientosFinancieros.AsNoTracking()
                 .Where(x => x.CajaId == cajaId)
-                .Select(x => new { x.Tipo, x.Importe })
+                .Where(x => x.Tipo != TipoMovimientoFinanciero.AjusteApertura &&
+                            x.Tipo != TipoMovimientoFinanciero.AjusteCierre &&
+                            x.Tipo != TipoMovimientoFinanciero.AjusteMigracion)
+                .Select(x => new { x.Sentido, x.Importe })
                 .ToArrayAsync(cancellationToken);
             var caja = await db.Cajas.AsNoTracking().SingleAsync(x => x.Id == cajaId, cancellationToken);
-            var entradas = movimientos
-                .Where(x => x.Tipo is TipoMovimientoCaja.IngresoManual or TipoMovimientoCaja.PagoVenta)
-                .Sum(x => x.Importe);
-            var salidas = movimientos
-                .Where(x => x.Tipo is TipoMovimientoCaja.EgresoManual or TipoMovimientoCaja.Reembolso or TipoMovimientoCaja.PagoComision)
-                .Sum(x => x.Importe);
-            return caja.EfectivoApertura + entradas - salidas;
+            return caja.EfectivoApertura + movimientos.Sum(x =>
+                x.Sentido == SentidoMovimientoFinanciero.Entrada ? x.Importe : -x.Importe);
         }
 
         public Task<Cliente?> ObtenerClienteAsync(Guid id, CancellationToken cancellationToken) =>
@@ -226,7 +267,7 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
             await db.ImpuestosConfigurados.ToArrayAsync(cancellationToken);
 
         public async Task<IReadOnlyList<MetodoPagoConfigurado>> ObtenerMetodosPagoAsync(CancellationToken cancellationToken) =>
-            await db.MetodosPagoConfigurados.ToArrayAsync(cancellationToken);
+            await db.MetodosPagoConfigurados.Include(x => x.CuentaFinanciera).ToArrayAsync(cancellationToken);
 
         public async Task<NumeracionDocumento?> BloquearNumeracionAsync(
             TipoDocumentoVenta tipo,
@@ -259,7 +300,7 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
 
         public void Agregar(Caja caja) => db.Cajas.Add(caja);
         public void Agregar(Venta venta) => db.Ventas.Add(venta);
-        public void Agregar(MovimientoCaja movimiento) => db.MovimientosCaja.Add(movimiento);
+        public void Agregar(MovimientoFinanciero movimiento) => db.MovimientosFinancieros.Add(movimiento);
         public void Agregar(MovimientoInventario movimiento) => db.MovimientosInventario.Add(movimiento);
         public void Agregar(Comision comision) => db.Comisiones.Add(comision);
 

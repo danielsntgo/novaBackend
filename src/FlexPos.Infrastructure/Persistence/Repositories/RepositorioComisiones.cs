@@ -143,7 +143,8 @@ public sealed class RepositorioComisiones(FlexPosDbContext contexto) : IReposito
             db.Servicios.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         public Task<MetodoPagoConfigurado?> ObtenerMetodoPagoAsync(Guid id, CancellationToken cancellationToken) =>
-            db.MetodosPagoConfigurados.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+            db.MetodosPagoConfigurados.Include(x => x.CuentaFinanciera)
+                .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         public async Task<Caja?> BloquearCajaActualAsync(CancellationToken cancellationToken)
         {
@@ -204,7 +205,34 @@ public sealed class RepositorioComisiones(FlexPosDbContext contexto) : IReposito
 
         public void Agregar(ReglaComision regla) => db.ReglasComision.Add(regla);
         public void Agregar(LiquidacionComision liquidacion) => db.LiquidacionesComision.Add(liquidacion);
-        public void Agregar(MovimientoCaja movimiento) => db.MovimientosCaja.Add(movimiento);
+        public void Agregar(MovimientoFinanciero movimiento) => db.MovimientosFinancieros.Add(movimiento);
+
+        public async Task<CuentaFinanciera?> BloquearCuentaFinancieraAsync(
+            Guid id,
+            CancellationToken cancellationToken)
+        {
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.cuentas_financieras WHERE id = @id FOR UPDATE", cancellationToken,
+                ("id", id));
+            var cuenta = await db.CuentasFinancieras.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (cuenta is not null)
+            {
+                await db.Entry(cuenta).ReloadAsync(cancellationToken);
+            }
+
+            return cuenta;
+        }
+
+        public async Task<decimal> CalcularSaldoCuentaAsync(Guid cuentaId, CancellationToken cancellationToken)
+        {
+            var movimientos = await db.MovimientosFinancieros.AsNoTracking()
+                .Where(x => x.CuentaFinancieraId == cuentaId)
+                .Select(x => new { x.Sentido, x.Importe })
+                .ToArrayAsync(cancellationToken);
+            return movimientos.Sum(x => x.Sentido == SentidoMovimientoFinanciero.Entrada
+                ? x.Importe
+                : -x.Importe);
+        }
 
         public async Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken)
         {

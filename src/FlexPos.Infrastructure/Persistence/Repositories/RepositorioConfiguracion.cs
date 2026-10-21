@@ -38,6 +38,7 @@ public sealed class RepositorioConfiguracion(FlexPosDbContext contexto) : IRepos
         CancellationToken cancellationToken) =>
         await contexto.MetodosPagoConfigurados
             .AsNoTracking()
+            .Include(x => x.CuentaFinanciera)
             .Where(x => x.ConfiguracionNegocioId == configuracionId)
             .OrderBy(x => x.NombreNormalizado)
             .ToArrayAsync(cancellationToken);
@@ -46,7 +47,7 @@ public sealed class RepositorioConfiguracion(FlexPosDbContext contexto) : IRepos
         Guid configuracionId,
         Guid metodoId,
         CancellationToken cancellationToken) =>
-        contexto.MetodosPagoConfigurados.SingleOrDefaultAsync(
+        contexto.MetodosPagoConfigurados.Include(x => x.CuentaFinanciera).SingleOrDefaultAsync(
             x => x.ConfiguracionNegocioId == configuracionId && x.Id == metodoId,
             cancellationToken);
 
