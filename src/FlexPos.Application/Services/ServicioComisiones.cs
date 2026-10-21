@@ -72,6 +72,69 @@ public sealed class ServicioComisiones(
         return Resultado<ReglaComisionDto>.Exito(Convertir(regla.Valor!));
     }
 
+    public async Task<Resultado<IReadOnlyList<ReglaComisionDto>>> CrearReglasAsync(
+        SolicitudCrearReglasComision solicitud,
+        CancellationToken cancellationToken)
+    {
+        var servicioIds = solicitud.ServicioIds;
+        if (!usuarioActual.ObtenerId().HasValue || solicitud.EmpleadoId == Guid.Empty ||
+            servicioIds is null || servicioIds.Count is < 1 or > 200 ||
+            servicioIds.Any(x => x == Guid.Empty) || servicioIds.Distinct().Count() != servicioIds.Count ||
+            !TryTipo(solicitud.Tipo, out var tipo))
+        {
+            return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(ErrorSolicitud());
+        }
+
+        await using var unidad = await repositorio.IniciarTransaccionAsync(cancellationToken);
+        var empleado = await unidad.ObtenerEmpleadoAsync(solicitud.EmpleadoId, cancellationToken);
+        if (empleado is null || !empleado.Activo)
+        {
+            return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(new ErrorDominio(
+                "comision.referencia_inactiva", "El empleado o servicio no existe o está inactivo."));
+        }
+
+        var servicios = await unidad.ObtenerServiciosAsync(servicioIds, cancellationToken);
+        if (servicios.Count != servicioIds.Count || servicios.Any(x => !x.Activo))
+        {
+            return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(new ErrorDominio(
+                "comision.referencia_inactiva", "El empleado o servicio no existe o está inactivo."));
+        }
+
+        var existentes = await unidad.BloquearReglasEmpleadoServiciosAsync(
+            solicitud.EmpleadoId, servicioIds, cancellationToken);
+        if (existentes.Count > 0)
+        {
+            return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(new ErrorDominio(
+                "comision.regla_existente", "Ya existe una regla para uno o más servicios seleccionados; actualícela o actívela."));
+        }
+
+        var reglas = new List<ReglaComision>(servicioIds.Count);
+        foreach (var servicioId in servicioIds)
+        {
+            var regla = ReglaComision.Crear(solicitud.EmpleadoId, servicioId, tipo, solicitud.Valor);
+            if (!regla.EsExitoso)
+            {
+                return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(regla.Error!);
+            }
+
+            reglas.Add(regla.Valor!);
+        }
+
+        foreach (var regla in reglas)
+        {
+            unidad.Agregar(regla);
+        }
+
+        if (!await unidad.GuardarCambiosAsync(cancellationToken))
+        {
+            return Resultado<IReadOnlyList<ReglaComisionDto>>.Fallo(
+                Conflicto("Una regla cambió en otra operación."));
+        }
+
+        await unidad.ConfirmarAsync(cancellationToken);
+        return Resultado<IReadOnlyList<ReglaComisionDto>>.Exito(reglas.Select(Convertir).ToArray());
+    }
+
     public async Task<Resultado<ReglaComisionDto>> ActualizarReglaAsync(
         Guid id,
         SolicitudActualizarReglaComision solicitud,

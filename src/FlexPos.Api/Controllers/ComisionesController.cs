@@ -42,6 +42,21 @@ public sealed class ComisionesController(ServicioComisiones servicio) : Controll
             : CrearProblema(resultado.Error!);
     }
 
+    [HttpPost("reglas/lote")]
+    [ProducesResponseType(typeof(IReadOnlyList<ReglaComisionDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CrearReglas(
+        [FromBody] CrearReglasComisionRequest solicitud,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.CrearReglasAsync(new SolicitudCrearReglasComision(
+            solicitud.EmpleadoId, solicitud.ServicioIds, solicitud.Tipo, solicitud.Valor), cancellationToken);
+        return resultado.EsExitoso
+            ? StatusCode(StatusCodes.Status201Created, resultado.Valor)
+            : CrearProblema(resultado.Error!);
+    }
+
     [HttpPut("reglas/{id:guid}")]
     [ProducesResponseType(typeof(ReglaComisionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

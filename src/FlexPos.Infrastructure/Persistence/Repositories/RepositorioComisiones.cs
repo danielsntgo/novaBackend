@@ -142,6 +142,11 @@ public sealed class RepositorioComisiones(FlexPosDbContext contexto) : IReposito
         public Task<Servicio?> ObtenerServicioAsync(Guid id, CancellationToken cancellationToken) =>
             db.Servicios.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+        public async Task<IReadOnlyList<Servicio>> ObtenerServiciosAsync(
+            IReadOnlyCollection<Guid> ids,
+            CancellationToken cancellationToken) =>
+            await db.Servicios.Where(x => ids.Contains(x.Id)).ToArrayAsync(cancellationToken);
+
         public Task<MetodoPagoConfigurado?> ObtenerMetodoPagoAsync(Guid id, CancellationToken cancellationToken) =>
             db.MetodosPagoConfigurados.Include(x => x.CuentaFinanciera)
                 .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -171,6 +176,25 @@ public sealed class RepositorioComisiones(FlexPosDbContext contexto) : IReposito
                 cancellationToken, ("empleadoId", empleadoId), ("servicioId", servicioId));
             return await db.ReglasComision.SingleOrDefaultAsync(
                 x => x.EmpleadoId == empleadoId && x.ServicioId == servicioId, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<ReglaComision>> BloquearReglasEmpleadoServiciosAsync(
+            Guid empleadoId,
+            IReadOnlyCollection<Guid> servicioIds,
+            CancellationToken cancellationToken)
+        {
+            if (servicioIds.Count == 0)
+            {
+                return [];
+            }
+
+            var identificadores = servicioIds.Distinct().Order().ToArray();
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.reglas_comision WHERE empleado_id = @empleadoId AND servicio_id = ANY (@servicioIds) ORDER BY servicio_id FOR UPDATE",
+                cancellationToken, ("empleadoId", empleadoId), ("servicioIds", identificadores));
+            return await db.ReglasComision.Where(x => x.EmpleadoId == empleadoId &&
+                    identificadores.Contains(x.ServicioId))
+                .OrderBy(x => x.ServicioId).ToArrayAsync(cancellationToken);
         }
 
         public async Task<IReadOnlyList<Comision>> BloquearComisionesSeleccionadasAsync(

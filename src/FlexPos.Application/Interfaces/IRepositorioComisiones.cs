@@ -42,12 +42,19 @@ public interface IUnidadTrabajoComisiones : IAsyncDisposable
     Task<ConfiguracionNegocio?> ObtenerConfiguracionPrincipalAsync(CancellationToken cancellationToken);
     Task<Empleado?> ObtenerEmpleadoAsync(Guid id, CancellationToken cancellationToken);
     Task<Servicio?> ObtenerServicioAsync(Guid id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Servicio>> ObtenerServiciosAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken);
     Task<MetodoPagoConfigurado?> ObtenerMetodoPagoAsync(Guid id, CancellationToken cancellationToken);
     Task<Caja?> BloquearCajaActualAsync(CancellationToken cancellationToken);
     Task<ReglaComision?> BloquearReglaAsync(Guid id, CancellationToken cancellationToken);
     Task<ReglaComision?> BloquearReglaEmpleadoServicioAsync(
         Guid empleadoId,
         Guid servicioId,
+        CancellationToken cancellationToken);
+    Task<IReadOnlyList<ReglaComision>> BloquearReglasEmpleadoServiciosAsync(
+        Guid empleadoId,
+        IReadOnlyCollection<Guid> servicioIds,
         CancellationToken cancellationToken);
     Task<IReadOnlyList<Comision>> BloquearComisionesSeleccionadasAsync(
         IReadOnlyCollection<Guid> ids,

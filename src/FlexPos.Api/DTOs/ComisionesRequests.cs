@@ -6,6 +6,12 @@ public sealed record CrearReglaComisionRequest(
     string? Tipo,
     decimal Valor);
 
+public sealed record CrearReglasComisionRequest(
+    Guid EmpleadoId,
+    IReadOnlyList<Guid>? ServicioIds,
+    string? Tipo,
+    decimal Valor);
+
 public sealed record ActualizarReglaComisionRequest(string? Tipo, decimal Valor);
 public sealed record EstadoReglaComisionRequest(bool Activa);
 public sealed record LiquidarComisionesRequest(

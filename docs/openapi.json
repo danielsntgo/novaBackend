@@ -1719,6 +1719,104 @@
         }
       }
     },
+    "/api/comisiones/reglas/lote": {
+      "post": {
+        "tags": [
+          "Comisiones"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearReglasComisionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearReglasComisionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearReglasComisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReglaComisionDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReglaComisionDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReglaComisionDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/comisiones/reglas/{id}": {
       "put": {
         "tags": [
@@ -3879,6 +3977,214 @@
         }
       }
     },
+    "/api/finanzas/transferencias": {
+      "post": {
+        "tags": [
+          "Finanzas"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudTransferenciaFinanciera"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudTransferenciaFinanciera"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudTransferenciaFinanciera"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaFinancieraDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaFinancieraDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaFinancieraDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Finanzas"
+        ],
+        "parameters": [
+          {
+            "name": "desdeUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hastaUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "cuentaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "tamanoPagina",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTransferenciasFinancierasDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTransferenciasFinancierasDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTransferenciasFinancierasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventario/articulos": {
       "get": {
         "tags": [
@@ -4728,6 +5034,14 @@
             }
           },
           {
+            "name": "cuentaFinancieraId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "estado",
             "in": "query",
             "schema": {
@@ -4745,14 +5059,6 @@
               ],
               "format": "int32",
               "default": 5000
-            }
-          },
-          {
-            "name": "cuentaFinancieraId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
             }
           }
         ],
@@ -4887,6 +5193,14 @@
             }
           },
           {
+            "name": "cuentaFinancieraId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "estado",
             "in": "query",
             "schema": {
@@ -4905,23 +5219,15 @@
               "format": "int32",
               "default": 5000
             }
-          },
-          {
-            "name": "cuentaFinancieraId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": {},
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
-              "text/csv": {}
+              "application/pdf": { },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { },
+              "text/csv": { }
             }
           },
           "400": {
@@ -6148,7 +6454,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": {}
+              "application/pdf": { }
             }
           },
           "404": {
@@ -6184,7 +6490,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/pdf": {}
+              "application/pdf": { }
             }
           },
           "404": {
@@ -7118,6 +7424,45 @@
           }
         }
       },
+      "CrearReglasComisionRequest": {
+        "required": [
+          "empleadoId",
+          "servicioIds",
+          "tipo",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "empleadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "servicioIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "CrearVentaRequest": {
         "required": [
           "clienteId",
@@ -7933,13 +8278,13 @@
           "requiereReferencia": {
             "type": "boolean"
           },
-          "esEfectivo": {
-            "type": "boolean",
-            "default": false
-          },
           "cuentaFinancieraId": {
             "type": "string",
             "format": "uuid"
+          },
+          "esEfectivo": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9488,6 +9833,47 @@
           }
         }
       },
+      "PaginaTransferenciasFinancierasDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanoPagina",
+          "totalElementos"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferenciaFinancieraDto"
+            }
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tamanoPagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalElementos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PaginaUsuariosDto": {
         "required": [
           "elementos",
@@ -10270,6 +10656,46 @@
           }
         }
       },
+      "SolicitudTransferenciaFinanciera": {
+        "required": [
+          "cuentaOrigenId",
+          "cuentaDestinoId",
+          "importe",
+          "concepto",
+          "referencia"
+        ],
+        "type": "object",
+        "properties": {
+          "cuentaOrigenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaDestinoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "importe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "concepto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TotalReporteDto": {
         "required": [
           "nombre",
@@ -10280,12 +10706,82 @@
           "nombre": {
             "type": "string"
           },
-          "valor": {},
+          "valor": { },
           "codigoMoneda": {
             "type": [
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "TransferenciaFinancieraDto": {
+        "required": [
+          "id",
+          "cuentaOrigenId",
+          "cuentaOrigenNombre",
+          "cuentaDestinoId",
+          "cuentaDestinoNombre",
+          "importe",
+          "codigoMoneda",
+          "concepto",
+          "referencia",
+          "fechaUtc",
+          "usuarioId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaOrigenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaOrigenNombre": {
+            "type": "string"
+          },
+          "cuentaDestinoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cuentaDestinoNombre": {
+            "type": "string"
+          },
+          "importe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "codigoMoneda": {
+            "type": "string"
+          },
+          "concepto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fechaUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usuarioId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
