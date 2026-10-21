@@ -29,6 +29,16 @@ public sealed class RepositorioFinanzas(FlexPosDbContext contexto) : IRepositori
             x => x.ConfiguracionNegocioId == configuracionId && x.Tipo == tipo && x.Nombre == nombre,
             cancellationToken);
 
+    public Task<MetodoPagoConfigurado?> ObtenerMetodoPagoAsync(
+        Guid configuracionId,
+        Guid metodoPagoId,
+        CancellationToken cancellationToken) =>
+        contexto.MetodosPagoConfigurados
+            .AsNoTracking()
+            .Include(x => x.CuentaFinanciera)
+            .SingleOrDefaultAsync(x => x.ConfiguracionNegocioId == configuracionId && x.Id == metodoPagoId,
+                cancellationToken);
+
     public async Task<(IReadOnlyList<CuentaFinanciera> Elementos, int Total)> ListarCuentasAsync(
         Guid configuracionId,
         TipoCuentaFinanciera? tipo,
@@ -266,6 +276,28 @@ public sealed class RepositorioFinanzas(FlexPosDbContext contexto) : IRepositori
             return await db.CuentasFinancieras.SingleOrDefaultAsync(
                 x => x.ConfiguracionNegocioId == configuracionId && x.Tipo == tipo && x.Nombre == nombre,
                 cancellationToken);
+        }
+
+        public async Task<MetodoPagoConfigurado?> BloquearMetodoPagoAsync(
+            Guid configuracionId,
+            Guid metodoPagoId,
+            CancellationToken cancellationToken)
+        {
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.metodos_pago WHERE configuracion_negocio_id = @configuracionId AND id = @id FOR UPDATE",
+                cancellationToken, ("configuracionId", configuracionId), ("id", metodoPagoId));
+            var metodo = await db.MetodosPagoConfigurados
+                .Include(x => x.CuentaFinanciera)
+                .SingleOrDefaultAsync(x => x.ConfiguracionNegocioId == configuracionId && x.Id == metodoPagoId,
+                    cancellationToken);
+            if (metodo is not null)
+            {
+                await db.Entry(metodo).ReloadAsync(cancellationToken);
+                db.Entry(metodo).Reference(x => x.CuentaFinanciera).IsLoaded = false;
+                await db.Entry(metodo).Reference(x => x.CuentaFinanciera).LoadAsync(cancellationToken);
+            }
+
+            return metodo;
         }
 
         public Task<bool> TieneMovimientosAsync(Guid cuentaId, CancellationToken cancellationToken) =>

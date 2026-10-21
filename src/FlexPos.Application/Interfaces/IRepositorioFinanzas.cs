@@ -10,6 +10,8 @@ public interface IRepositorioFinanzas
     Task<CuentaFinanciera?> ObtenerCuentaAsync(Guid configuracionId, Guid cuentaId, CancellationToken cancellationToken);
     Task<CuentaFinanciera?> ObtenerCuentaBaseAsync(
         Guid configuracionId, TipoCuentaFinanciera tipo, string nombre, CancellationToken cancellationToken);
+    Task<MetodoPagoConfigurado?> ObtenerMetodoPagoAsync(
+        Guid configuracionId, Guid metodoPagoId, CancellationToken cancellationToken);
     Task<(IReadOnlyList<CuentaFinanciera> Elementos, int Total)> ListarCuentasAsync(
         Guid configuracionId,
         TipoCuentaFinanciera? tipo,
@@ -59,6 +61,8 @@ public interface IUnidadTrabajoFinanzas : IAsyncDisposable
     Task<CuentaFinanciera?> BloquearCuentaAsync(Guid configuracionId, Guid cuentaId, CancellationToken cancellationToken);
     Task<CuentaFinanciera?> BloquearCuentaBaseAsync(
         Guid configuracionId, TipoCuentaFinanciera tipo, string nombre, CancellationToken cancellationToken);
+    Task<MetodoPagoConfigurado?> BloquearMetodoPagoAsync(
+        Guid configuracionId, Guid metodoPagoId, CancellationToken cancellationToken);
     Task<bool> TieneMovimientosAsync(Guid cuentaId, CancellationToken cancellationToken);
     Task<bool> TieneMetodoPagoAsync(Guid cuentaId, CancellationToken cancellationToken);
     Task<bool> TieneMetodoPagoActivoAsync(Guid cuentaId, CancellationToken cancellationToken);

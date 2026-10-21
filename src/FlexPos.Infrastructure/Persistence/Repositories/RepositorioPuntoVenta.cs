@@ -186,7 +186,8 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
                 .Where(x => x.CajaId == cajaId)
                 .Where(x => x.Tipo != TipoMovimientoFinanciero.AjusteApertura &&
                             x.Tipo != TipoMovimientoFinanciero.AjusteCierre &&
-                            x.Tipo != TipoMovimientoFinanciero.AjusteMigracion)
+                            x.Tipo != TipoMovimientoFinanciero.AjusteMigracion &&
+                            x.Tipo != TipoMovimientoFinanciero.SaldoInicial)
                 .Select(x => new { x.Sentido, x.Importe })
                 .ToArrayAsync(cancellationToken);
             var caja = await db.Cajas.AsNoTracking().SingleAsync(x => x.Id == cajaId, cancellationToken);

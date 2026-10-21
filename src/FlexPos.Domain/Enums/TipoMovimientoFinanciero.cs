@@ -13,4 +13,5 @@ public static class TipoMovimientoFinanciero
     public const string AjusteApertura = "AjusteApertura";
     public const string AjusteCierre = "AjusteCierre";
     public const string AjusteMigracion = "AjusteMigracion";
+    public const string SaldoInicial = "SaldoInicial";
 }

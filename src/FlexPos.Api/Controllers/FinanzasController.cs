@@ -93,6 +93,21 @@ public sealed class FinanzasController(ServicioFinanzas servicio) : ControllerBa
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
+    [HttpPost("movimientos")]
+    [ProducesResponseType(typeof(MovimientoFinancieroDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegistrarMovimiento(
+        [FromBody] SolicitudMovimientoMetodoPago solicitud,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.RegistrarMovimientoMetodoPagoAsync(solicitud, cancellationToken);
+        return resultado.EsExitoso
+            ? StatusCode(StatusCodes.Status201Created, resultado.Valor)
+            : CrearProblema(resultado.Error!);
+    }
+
     [HttpPost("transferencias")]
     [ProducesResponseType(typeof(TransferenciaFinancieraDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -128,9 +143,9 @@ public sealed class FinanzasController(ServicioFinanzas servicio) : ControllerBa
     {
         var estado = error.Codigo switch
         {
-            "cuenta_financiera.no_encontrada" => StatusCodes.Status404NotFound,
+            "cuenta_financiera.no_encontrada" or "metodo_pago.no_encontrado" => StatusCodes.Status404NotFound,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) ||
-                            codigo is "cuenta_financiera.saldo_insuficiente" or "cuenta_financiera.cupo_excedido" =>
+                            codigo is "cuenta_financiera.saldo_insuficiente" or "cuenta_financiera.cupo_excedido" or "caja.no_abierta" =>
                 StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest
         };

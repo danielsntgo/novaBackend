@@ -54,6 +54,13 @@ public sealed record SolicitudCuentaFinanciera(
     string? CodigoMoneda,
     string? Entidad,
     string? UltimosDigitos,
-    decimal? CupoCredito);
+    decimal? CupoCredito,
+    decimal? SaldoInicial = null);
+
+public sealed record SolicitudMovimientoMetodoPago(
+    Guid MetodoPagoId,
+    string? Sentido,
+    decimal Importe,
+    string? Concepto);
 
 public sealed record SolicitudEstadoCuentaFinanciera(bool Activa);

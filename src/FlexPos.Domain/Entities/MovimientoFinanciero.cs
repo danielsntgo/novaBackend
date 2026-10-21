@@ -150,14 +150,23 @@ public sealed class MovimientoFinanciero : EntidadAuditable
                 !metodoPagoId.HasValue && !ventaId.HasValue && !devolucionVentaId.HasValue &&
                 !compraId.HasValue && !liquidacionComisionId.HasValue,
             TipoMovimientoFinanciero.IngresoManual =>
-                sentido == SentidoMovimientoFinanciero.Entrada && NoTieneOrigen(cajaId, metodoPagoId, ventaId,
-                    devolucionVentaId, compraId, liquidacionComisionId, transferenciaFinancieraId),
+                sentido == SentidoMovimientoFinanciero.Entrada &&
+                (NoTieneOrigen(cajaId, metodoPagoId, ventaId, devolucionVentaId, compraId,
+                     liquidacionComisionId, transferenciaFinancieraId) ||
+                 tieneSoloMetodo && !ventaId.HasValue && !devolucionVentaId.HasValue && !compraId.HasValue &&
+                 !liquidacionComisionId.HasValue && !transferenciaFinancieraId.HasValue),
             TipoMovimientoFinanciero.EgresoManual =>
-                sentido == SentidoMovimientoFinanciero.Salida && NoTieneOrigen(cajaId, metodoPagoId, ventaId,
-                    devolucionVentaId, compraId, liquidacionComisionId, transferenciaFinancieraId),
+                sentido == SentidoMovimientoFinanciero.Salida &&
+                (NoTieneOrigen(cajaId, metodoPagoId, ventaId, devolucionVentaId, compraId,
+                     liquidacionComisionId, transferenciaFinancieraId) ||
+                 tieneSoloMetodo && !ventaId.HasValue && !devolucionVentaId.HasValue && !compraId.HasValue &&
+                 !liquidacionComisionId.HasValue && !transferenciaFinancieraId.HasValue),
             TipoMovimientoFinanciero.AjusteApertura or TipoMovimientoFinanciero.AjusteCierre =>
                 cajaId.HasValue && !metodoPagoId.HasValue && !ventaId.HasValue && !devolucionVentaId.HasValue &&
                 !compraId.HasValue && !liquidacionComisionId.HasValue && !transferenciaFinancieraId.HasValue,
+            TipoMovimientoFinanciero.SaldoInicial => !cajaId.HasValue && !metodoPagoId.HasValue &&
+                NoTieneOrigen(cajaId, metodoPagoId, ventaId, devolucionVentaId, compraId,
+                    liquidacionComisionId, transferenciaFinancieraId),
             _ => true
         };
     }

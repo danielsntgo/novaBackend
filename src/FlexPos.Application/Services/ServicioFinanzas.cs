@@ -110,6 +110,13 @@ public sealed class ServicioFinanzas(
             return Resultado<CuentaFinancieraDto>.Fallo(ErrorSolicitud());
         }
 
+        var saldoInicial = solicitud.SaldoInicial ?? 0m;
+        if (saldoInicial < 0m || saldoInicial > 9_999_999_999_999_999.99m ||
+            decimal.Round(saldoInicial, 2) != saldoInicial)
+        {
+            return Resultado<CuentaFinancieraDto>.Fallo(ErrorSolicitud());
+        }
+
         var cuenta = CuentaFinanciera.Crear(
             configuracion.Id, solicitud.Nombre, tipo, solicitud.CodigoMoneda,
             solicitud.Entidad, solicitud.UltimosDigitos, solicitud.CupoCredito);
@@ -118,13 +125,155 @@ public sealed class ServicioFinanzas(
             return Resultado<CuentaFinancieraDto>.Fallo(cuenta.Error!);
         }
 
-        repositorio.Agregar(cuenta.Valor!);
-        if (!await repositorio.GuardarCambiosAsync(cancellationToken))
+        var saldoContable = tipo == TipoCuentaFinanciera.TarjetaCredito ? -saldoInicial : saldoInicial;
+        var saldoValido = cuenta.Valor!.ValidarSaldo(saldoContable);
+        if (!saldoValido.EsExitoso)
+        {
+            return Resultado<CuentaFinancieraDto>.Fallo(saldoValido.Error!);
+        }
+
+        MovimientoFinanciero? movimientoSaldoInicial = null;
+        if (saldoInicial > 0m)
+        {
+            var usuarioId = usuarioActual.ObtenerId();
+            if (!usuarioId.HasValue)
+            {
+                return Resultado<CuentaFinancieraDto>.Fallo(ErrorUsuario());
+            }
+
+            var ahora = reloj.GetUtcNow();
+            var movimiento = MovimientoFinanciero.Crear(
+                cuenta.Valor.Id, TipoMovimientoFinanciero.SaldoInicial,
+                tipo == TipoCuentaFinanciera.TarjetaCredito
+                    ? SentidoMovimientoFinanciero.Salida
+                    : SentidoMovimientoFinanciero.Entrada,
+                saldoInicial, cuenta.Valor.CodigoMoneda, ahora, "Saldo inicial");
+            if (!movimiento.EsExitoso)
+            {
+                return Resultado<CuentaFinancieraDto>.Fallo(movimiento.Error!);
+            }
+
+            movimientoSaldoInicial = movimiento.Valor!;
+            movimientoSaldoInicial.RegistrarCreacion(ahora, usuarioId.Value);
+        }
+
+        await using var unidad = await repositorio.IniciarTransaccionAsync(cancellationToken);
+        unidad.Agregar(cuenta.Valor!);
+        if (movimientoSaldoInicial is not null)
+        {
+            unidad.Agregar(movimientoSaldoInicial);
+        }
+
+        if (!await unidad.GuardarCambiosAsync(cancellationToken))
         {
             return Resultado<CuentaFinancieraDto>.Fallo(Conflicto());
         }
 
-        return Resultado<CuentaFinancieraDto>.Exito(Convertir(cuenta.Valor!, 0m));
+        await unidad.ConfirmarAsync(cancellationToken);
+        return Resultado<CuentaFinancieraDto>.Exito(Convertir(cuenta.Valor!, saldoContable));
+    }
+
+    public async Task<Resultado<MovimientoFinancieroDto>> RegistrarMovimientoMetodoPagoAsync(
+        SolicitudMovimientoMetodoPago solicitud,
+        CancellationToken cancellationToken)
+    {
+        if (solicitud.MetodoPagoId == Guid.Empty || !Enum.TryParse<SentidoMovimientoFinanciero>(
+                solicitud.Sentido, true, out var sentido) || !Enum.IsDefined(sentido) ||
+            solicitud.Importe <= 0m || solicitud.Importe > 9_999_999_999_999_999.99m ||
+            decimal.Round(solicitud.Importe, 2) != solicitud.Importe ||
+            string.IsNullOrWhiteSpace(solicitud.Concepto) || solicitud.Concepto.Trim().Length > 250)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(ErrorMovimiento());
+        }
+
+        var usuarioId = usuarioActual.ObtenerId();
+        if (!usuarioId.HasValue)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(ErrorUsuario());
+        }
+
+        var configuracion = await repositorio.ObtenerConfiguracionPrincipalAsync(cancellationToken);
+        if (configuracion is null)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(NoConfiguracion());
+        }
+
+        var metodoPrevio = await repositorio.ObtenerMetodoPagoAsync(
+            configuracion.Id, solicitud.MetodoPagoId, cancellationToken);
+        if (metodoPrevio is null || !metodoPrevio.Activo)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(NoMetodoPago());
+        }
+
+        await using var unidad = await repositorio.IniciarTransaccionAsync(cancellationToken);
+        var caja = metodoPrevio.EsEfectivo
+            ? await unidad.BloquearCajaActualAsync(cancellationToken)
+            : null;
+        if (metodoPrevio.EsEfectivo && caja is null)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(new ErrorDominio(
+                "caja.no_abierta", "Abre la caja de efectivo antes de registrar este movimiento."));
+        }
+
+        var metodo = await unidad.BloquearMetodoPagoAsync(
+            configuracion.Id, solicitud.MetodoPagoId, cancellationToken);
+        if (metodo is null || !metodo.Activo)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(NoMetodoPago());
+        }
+
+        if (metodo.CuentaFinancieraId != metodoPrevio.CuentaFinancieraId ||
+            metodo.EsEfectivo != metodoPrevio.EsEfectivo)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(Conflicto(
+                "El método de pago cambió durante la operación. Actualiza e inténtalo de nuevo."));
+        }
+
+        var cuenta = await unidad.BloquearCuentaAsync(
+            configuracion.Id, metodo.CuentaFinancieraId, cancellationToken);
+        if (cuenta is null || !metodo.EsCompatibleConCuenta(cuenta) ||
+            cuenta.CodigoMoneda != configuracion.CodigoMoneda)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(Conflicto(
+                "La cuenta asociada al método de pago no está disponible."));
+        }
+
+        if (metodo.EsEfectivo && (caja is null || caja.Estado != EstadoCaja.Abierta ||
+                                  caja.CuentaFinancieraId != cuenta.Id))
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(Conflicto(
+                "La caja abierta no corresponde a la cuenta asignada al método de efectivo."));
+        }
+
+        var tipoMovimiento = sentido == SentidoMovimientoFinanciero.Entrada
+            ? TipoMovimientoFinanciero.IngresoManual
+            : TipoMovimientoFinanciero.EgresoManual;
+        var ahora = reloj.GetUtcNow();
+        var movimiento = MovimientoFinanciero.Crear(
+            cuenta.Id, tipoMovimiento, sentido, solicitud.Importe, cuenta.CodigoMoneda, ahora,
+            solicitud.Concepto, metodo.EsEfectivo ? caja!.Id : null, metodo.Id);
+        if (!movimiento.EsExitoso)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(movimiento.Error!);
+        }
+
+        var saldoActual = await unidad.CalcularSaldoAsync(cuenta.Id, cancellationToken);
+        var saldoPosterior = movimiento.Valor!.Aplicar(saldoActual);
+        var validacionSaldo = cuenta.ValidarSaldo(saldoPosterior);
+        if (!validacionSaldo.EsExitoso)
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(validacionSaldo.Error!);
+        }
+
+        movimiento.Valor.RegistrarCreacion(ahora, usuarioId.Value);
+        unidad.Agregar(movimiento.Valor);
+        if (!await unidad.GuardarCambiosAsync(cancellationToken))
+        {
+            return Resultado<MovimientoFinancieroDto>.Fallo(Conflicto());
+        }
+
+        await unidad.ConfirmarAsync(cancellationToken);
+        return Resultado<MovimientoFinancieroDto>.Exito(Convertir(movimiento.Valor, saldoPosterior));
     }
 
     public async Task<Resultado<CuentaFinancieraDto>> ActualizarCuentaAsync(
@@ -486,6 +635,9 @@ public sealed class ServicioFinanzas(
     private static ErrorDominio NoEncontrada() => new(
         "cuenta_financiera.no_encontrada", "No se encontró la cuenta financiera solicitada.");
 
+    private static ErrorDominio NoMetodoPago() => new(
+        "metodo_pago.no_encontrado", "No se encontró un método de pago activo para este movimiento.");
+
     private static ErrorDominio Conflicto(string mensaje = "La cuenta cambió en otra operación o ya existe con esos datos.") =>
         new("cuenta_financiera.conflicto", mensaje);
 
@@ -497,4 +649,10 @@ public sealed class ServicioFinanzas(
 
     private static ErrorDominio ErrorSolicitud() => new(
         "cuenta_financiera.solicitud_invalida", "Los datos de la cuenta financiera no son válidos.");
+
+    private static ErrorDominio ErrorMovimiento() => new(
+        "movimiento_financiero.datos_invalidos", "El sentido, importe, método o concepto del movimiento no son válidos.");
+
+    private static ErrorDominio ErrorUsuario() => new(
+        "autenticacion.usuario_no_disponible", "No se pudo identificar al usuario actual.");
 }

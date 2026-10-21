@@ -64,7 +64,8 @@ public sealed partial class RepositorioReportes
         var movimientos = await contexto.MovimientosFinancieros.AsNoTracking()
             .Where(x => x.Tipo != TipoMovimientoFinanciero.AjusteApertura &&
                         x.Tipo != TipoMovimientoFinanciero.AjusteCierre &&
-                        x.Tipo != TipoMovimientoFinanciero.AjusteMigracion)
+                        x.Tipo != TipoMovimientoFinanciero.AjusteMigracion &&
+                        x.Tipo != TipoMovimientoFinanciero.SaldoInicial)
             .Where(x => x.CajaId.HasValue && ids.Contains(x.CajaId.Value))
             .GroupBy(x => new { x.CajaId, x.Tipo, x.Sentido })
             .Select(x => new { x.Key.CajaId, x.Key.Tipo, x.Key.Sentido, Importe = x.Sum(m => m.Importe) })
