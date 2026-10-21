@@ -26,6 +26,37 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                 WHERE detalle.tipo = 'Producto'
                   AND detalle.articulo_inventario_id = articulo.id;
                 """);
+
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE flexpos.detalles_venta ENABLE ROW LEVEL SECURITY;
+
+                DO $flexpos_rls_fase8$
+                BEGIN
+                    IF to_regrole('flexpos_api') IS NOT NULL THEN
+                        EXECUTE 'GRANT SELECT, INSERT ON TABLE flexpos.detalles_venta TO flexpos_api';
+
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_policies
+                            WHERE schemaname = 'flexpos'
+                              AND tablename = 'detalles_venta'
+                              AND policyname = 'pol_flexpos_api_select'
+                        ) THEN
+                            EXECUTE 'CREATE POLICY pol_flexpos_api_select ON flexpos.detalles_venta FOR SELECT TO flexpos_api USING (true)';
+                        END IF;
+
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_policies
+                            WHERE schemaname = 'flexpos'
+                              AND tablename = 'detalles_venta'
+                              AND policyname = 'pol_flexpos_api_insert'
+                        ) THEN
+                            EXECUTE 'CREATE POLICY pol_flexpos_api_insert ON flexpos.detalles_venta FOR INSERT TO flexpos_api WITH CHECK (true)';
+                        END IF;
+                    END IF;
+                END
+                $flexpos_rls_fase8$;
+                """);
         }
 
         /// <inheritdoc />
