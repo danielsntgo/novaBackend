@@ -143,6 +143,16 @@ public sealed class CitasPostgreSqlTests
         Assert.Equal(inicio.ToUniversalTime(), cita.InicioUtc);
         Assert.Equal(inicio.AddMinutes(45).ToUniversalTime(), cita.FinUtc);
 
+        using var consultaAgenda = CrearSolicitud(
+            HttpMethod.Get,
+            $"/api/citas?desdeUtc={Uri.EscapeDataString(inicio.ToUniversalTime().Date.ToString("O"))}&hastaUtc={Uri.EscapeDataString(inicio.ToUniversalTime().Date.AddDays(1).ToString("O"))}",
+            acceso.TokenAcceso);
+        using var respuestaAgenda = await clienteHttp.SendAsync(consultaAgenda);
+        Assert.Equal(HttpStatusCode.OK, respuestaAgenda.StatusCode);
+        var agenda = await respuestaAgenda.Content.ReadFromJsonAsync<PaginaCitasDto>();
+        Assert.NotNull(agenda);
+        Assert.Contains(agenda.Elementos, elemento => elemento.Id == cita.Id);
+
         var fechaLocal = Uri.EscapeDataString("2026-10-05T00:00:00-05:00");
         var disponibilidad = await clienteHttp.GetFromJsonAsync<IReadOnlyList<EmpleadoDisponibilidadDto>>(
             $"/api/citas/disponibilidad?servicioId={servicio.Id}&fechaLocal={fechaLocal}");
@@ -212,6 +222,13 @@ public sealed class CitasPostgreSqlTests
             HttpMethod.Patch, $"/api/citas/{cita.Id}/estado", acceso.TokenAcceso, new { estado = "Cancelada" });
         using var respuestaCancelacion = await clienteHttp.SendAsync(cancelarCita);
         Assert.Equal(HttpStatusCode.OK, respuestaCancelacion.StatusCode);
+    }
+
+    private static HttpRequestMessage CrearSolicitud(HttpMethod metodo, string ruta, string token)
+    {
+        var solicitud = new HttpRequestMessage(metodo, ruta);
+        solicitud.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return solicitud;
     }
 
     private static HttpRequestMessage CrearSolicitud(HttpMethod metodo, string ruta, string token, object cuerpo)

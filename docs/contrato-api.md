@@ -94,6 +94,7 @@ Los métodos y cuerpos concretos de cada ruta están en `openapi.json`. El docum
 ### Citas y horarios
 
 - Para crear una cita, cliente, servicio y empleado deben existir y estar activos. Se copia la duración del servicio a la cita; modificar el servicio después no altera la duración ya guardada.
+- `POST /api/citas` persiste la cita dentro de la agenda y responde `201 Created` con el DTO creado. La respuesta incluye `id`, `inicioUtc`, `finUtc`, estado `Pendiente` y los datos de cliente, servicio y empleado.
 - `InicioLocal` y `fechaLocal` deben ser fecha-hora ISO 8601 con desfase UTC explícito, por ejemplo `2026-10-05T09:00:00-05:00`. Las citas se guardan y devuelven como `inicioUtc`/`finUtc` en UTC. No hay zona horaria IANA ni regla de horario de verano configurada por negocio; el cliente debe enviar el desfase correcto.
 - `GET /api/citas/disponibilidad?servicioId=...&fechaLocal=...` devuelve empleados con intervalos continuos disponibles (`periodos`), no una lista de slots. Un intervalo se devuelve solo si cabe completa la duración del servicio. Solo considera empleados activos con horario configurado.
 - Horario semanal: `diaSemana` usa `DayOfWeek` de .NET: `0` domingo, `1` lunes, ..., `6` sábado; `horaInicio` y `horaFin` son horas locales. Se aceptan varios intervalos al día, pero no se pueden solapar y `horaFin` debe ser posterior a `horaInicio`. Una lista vacía elimina el horario y deja al empleado sin disponibilidad.

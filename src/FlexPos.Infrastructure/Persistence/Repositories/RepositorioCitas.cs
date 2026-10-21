@@ -109,6 +109,11 @@ public sealed class RepositorioCitas(FlexPosDbContext contexto) : IRepositorioCi
 
         try
         {
+            if (contexto.Entry(cita).State == EntityState.Detached)
+            {
+                contexto.Citas.Add(cita);
+            }
+
             await contexto.SaveChangesAsync(cancellationToken);
             await transaccion.CommitAsync(cancellationToken);
             return null;
