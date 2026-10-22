@@ -14,6 +14,7 @@ public interface IRepositorioEmpleados
         CancellationToken cancellationToken);
     Task<IReadOnlyList<Empleado>> ListarActivosConHorarioAsync(CancellationToken cancellationToken);
     void Agregar(Empleado empleado);
+    void Eliminar(Empleado empleado);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
     Task<ErrorDominio?> GuardarHorarioConBloqueoAsync(Empleado empleado, CancellationToken cancellationToken);
 }

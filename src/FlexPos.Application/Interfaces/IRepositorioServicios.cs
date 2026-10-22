@@ -13,5 +13,6 @@ public interface IRepositorioServicios
         CancellationToken cancellationToken);
     Task<bool> ExisteAlgunoAsync(CancellationToken cancellationToken);
     void Agregar(Servicio servicio);
+    void Eliminar(Servicio servicio);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
 }

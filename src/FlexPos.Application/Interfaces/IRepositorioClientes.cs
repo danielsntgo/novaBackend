@@ -12,5 +12,6 @@ public interface IRepositorioClientes
         int tomar,
         CancellationToken cancellationToken);
     void Agregar(Cliente cliente);
+    void Eliminar(Cliente cliente);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
 }

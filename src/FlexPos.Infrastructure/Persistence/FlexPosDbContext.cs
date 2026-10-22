@@ -26,6 +26,9 @@ public sealed class FlexPosDbContext(
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<DetalleCompra> DetallesCompra => Set<DetalleCompra>();
+    public DbSet<DevolucionCompra> DevolucionesCompra => Set<DevolucionCompra>();
+    public DbSet<DetalleDevolucionCompra> DetallesDevolucionCompra => Set<DetalleDevolucionCompra>();
+    public DbSet<PagoDevolucionCompra> PagosDevolucionCompra => Set<PagoDevolucionCompra>();
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<Caja> Cajas => Set<Caja>();
     public DbSet<CuentaFinanciera> CuentasFinancieras => Set<CuentaFinanciera>();

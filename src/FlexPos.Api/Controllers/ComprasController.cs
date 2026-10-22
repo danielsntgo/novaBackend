@@ -80,6 +80,41 @@ public sealed class ComprasController(ServicioCompras servicio) : ControllerBase
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
+    [HttpPost("{id:guid}/devoluciones")]
+    [ProducesResponseType(typeof(CompraDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Devolver(
+        Guid id,
+        [FromBody] DevolucionCompraRequest solicitud,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.DevolverAsync(id, new SolicitudDevolucionCompra(
+            solicitud.Motivo,
+            solicitud.Lineas?.Select(x => new SolicitudLineaDevolucionCompra(x.DetalleCompraId, x.Cantidad)).ToArray(),
+            solicitud.Pagos?.Select(x => new SolicitudPagoCompra(x.MetodoPagoId, x.Importe, x.Referencia)).ToArray()),
+            cancellationToken);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
+    }
+
+    [HttpPost("{id:guid}/anular")]
+    [ProducesResponseType(typeof(CompraDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Anular(
+        Guid id,
+        [FromBody] AnularCompraRequest solicitud,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.AnularAsync(id, new SolicitudAnularCompra(
+            solicitud.Motivo,
+            solicitud.Pagos?.Select(x => new SolicitudPagoCompra(x.MetodoPagoId, x.Importe, x.Referencia)).ToArray()),
+            cancellationToken);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
+    }
+
     private static SolicitudCompra Convertir(GuardarCompraRequest solicitud) => new(
         solicitud.ProveedorId,
         solicitud.FechaCompraUtc,
@@ -94,6 +129,9 @@ public sealed class ComprasController(ServicioCompras servicio) : ControllerBase
         {
             "compra.no_encontrada" => StatusCodes.Status404NotFound,
             "compra.conflicto" or "compra.no_editable" or "compra.no_confirmable" or "compra.moneda_conflicto" =>
+                StatusCodes.Status409Conflict,
+            "compra.cantidad_devolucion_invalida" or "compra.importe_reintegro_invalido" or
+                "compra.cuenta_financiera_invalida" or "caja.no_abierta" or "inventario.stock_insuficiente" =>
                 StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest

@@ -63,35 +63,45 @@ public sealed partial class RepositorioReportes
     {
         var pagos = EnRango(contexto.PagosVenta.AsNoTracking(), filtros.DesdeUtc, filtros.HastaUtc, x => x.FechaCreacionUtc);
         var reembolsos = EnRango(contexto.PagosDevolucionVenta.AsNoTracking(), filtros.DesdeUtc, filtros.HastaUtc, x => x.FechaCreacionUtc);
+        var reembolsosCompra = EnRango(contexto.PagosDevolucionCompra.AsNoTracking(), filtros.DesdeUtc, filtros.HastaUtc, x => x.FechaCreacionUtc);
         if (filtros.MetodoPagoId.HasValue)
         {
             pagos = pagos.Where(x => x.MetodoPagoId == filtros.MetodoPagoId);
             reembolsos = reembolsos.Where(x => x.MetodoPagoId == filtros.MetodoPagoId);
+            reembolsosCompra = reembolsosCompra.Where(x => x.MetodoPagoId == filtros.MetodoPagoId);
         }
 
         var ventasQuery = from pago in pagos
                           join venta in contexto.Ventas.AsNoTracking() on pago.VentaId equals venta.Id
                           where !filtros.ClienteId.HasValue || venta.ClienteId == filtros.ClienteId
                           select new EventoIngreso(
-                              pago.FechaCreacionUtc, "PagoVenta", venta.Id, pago.MetodoPagoNombre,
-                              pago.EsEfectivo, pago.Importe, venta.CodigoMoneda, venta.ClienteNombre);
+                              pago.FechaCreacionUtc, "PagoVenta", venta.Id, null, pago.MetodoPagoNombre,
+                              pago.EsEfectivo, pago.Importe, venta.CodigoMoneda, venta.ClienteNombre, null);
         var reembolsosQuery = from pago in reembolsos
                               join devolucion in contexto.DevolucionesVenta.AsNoTracking()
                                   on pago.DevolucionVentaId equals devolucion.Id
                               join venta in contexto.Ventas.AsNoTracking() on devolucion.VentaId equals venta.Id
                               where !filtros.ClienteId.HasValue || venta.ClienteId == filtros.ClienteId
                               select new EventoIngreso(
-                                  pago.FechaCreacionUtc, "Reembolso", venta.Id, pago.MetodoPagoNombre,
-                                  pago.EsEfectivo, -pago.Importe, venta.CodigoMoneda, venta.ClienteNombre);
-        var consulta = ventasQuery.Concat(reembolsosQuery)
+                                  pago.FechaCreacionUtc, "Reembolso", venta.Id, null, pago.MetodoPagoNombre,
+                                  pago.EsEfectivo, -pago.Importe, venta.CodigoMoneda, venta.ClienteNombre, null);
+        var reembolsosCompraQuery = from pago in reembolsosCompra
+                                    join devolucion in contexto.DevolucionesCompra.AsNoTracking()
+                                        on pago.DevolucionCompraId equals devolucion.Id
+                                    join compra in contexto.Compras.AsNoTracking() on devolucion.CompraId equals compra.Id
+                                    join proveedor in contexto.Proveedores.AsNoTracking() on compra.ProveedorId equals proveedor.Id
+                                    select new EventoIngreso(
+                                        pago.FechaCreacionUtc, "ReembolsoCompra", null, compra.Id, pago.MetodoPagoNombre,
+                                        pago.EsEfectivo, pago.Importe, compra.CodigoMoneda, null, proveedor.Nombre);
+        var consulta = ventasQuery.Concat(reembolsosQuery).Concat(reembolsosCompraQuery)
             .OrderByDescending(x => x.FechaUtc)
-            .ThenBy(x => x.VentaId);
+            .ThenBy(x => x.VentaId).ThenBy(x => x.CompraId);
 
         return await CrearAsync(
             "ingresos", "Ingresos y reembolsos", filtros, consulta,
-            ["FechaUtc", "Tipo", "VentaId", "Cliente", "MetodoPago", "EsEfectivo", "Importe", "Moneda"],
-            x => Fila(("FechaUtc", x.FechaUtc), ("Tipo", x.Tipo), ("VentaId", x.VentaId),
-                ("Cliente", x.ClienteNombre), ("MetodoPago", x.MetodoPagoNombre),
+            ["FechaUtc", "Tipo", "VentaId", "CompraId", "Cliente", "Proveedor", "MetodoPago", "EsEfectivo", "Importe", "Moneda"],
+            x => Fila(("FechaUtc", x.FechaUtc), ("Tipo", x.Tipo), ("VentaId", x.VentaId), ("CompraId", x.CompraId),
+                ("Cliente", x.ClienteNombre), ("Proveedor", x.ProveedorNombre), ("MetodoPago", x.MetodoPagoNombre),
                 ("EsEfectivo", x.EsEfectivo), ("Importe", x.Importe), ("Moneda", x.CodigoMoneda)),
             elementos =>
             [
@@ -219,12 +229,14 @@ public sealed partial class RepositorioReportes
     private sealed record EventoIngreso(
         DateTimeOffset FechaUtc,
         string Tipo,
-        Guid VentaId,
+        Guid? VentaId,
+        Guid? CompraId,
         string MetodoPagoNombre,
         bool EsEfectivo,
         decimal Importe,
         string CodigoMoneda,
-        string? ClienteNombre);
+        string? ClienteNombre,
+        string? ProveedorNombre);
 
     private sealed record EventoCatalogo(
         DateTimeOffset FechaUtc,

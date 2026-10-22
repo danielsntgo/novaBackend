@@ -12,5 +12,6 @@ public interface IRepositorioProveedores
         int tomar,
         CancellationToken cancellationToken);
     void Agregar(Proveedor proveedor);
+    void Eliminar(Proveedor proveedor);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
 }

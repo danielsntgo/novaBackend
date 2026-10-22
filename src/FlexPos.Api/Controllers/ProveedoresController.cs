@@ -68,16 +68,28 @@ public sealed class ProveedoresController(ServicioProveedores servicio) : Contro
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.EliminarAsync(id, cancellationToken);
+        return resultado.EsExitoso ? NoContent() : CrearProblema(resultado.Error!);
+    }
+
     private static SolicitudProveedor Convertir(GuardarProveedorRequest solicitud) => new(
         solicitud.Nombre, solicitud.IdentificacionFiscal, solicitud.Telefono, solicitud.Correo);
 
     private ObjectResult CrearProblema(ErrorDominio error)
     {
-        var estado = error.Codigo == "proveedor.no_encontrado"
-            ? StatusCodes.Status404NotFound
-            : error.Codigo.EndsWith("conflicto", StringComparison.Ordinal)
-                ? StatusCodes.Status409Conflict
-                : StatusCodes.Status400BadRequest;
+        var estado = error.Codigo switch
+        {
+            "proveedor.no_encontrado" => StatusCodes.Status404NotFound,
+            "proveedor.no_eliminable" => StatusCodes.Status409Conflict,
+            var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
+            _ => StatusCodes.Status400BadRequest
+        };
         return Problem(statusCode: estado, title: error.Mensaje, type: $"urn:flexpos:error:{error.Codigo}");
     }
 }

@@ -73,11 +73,22 @@ public sealed class ClientesController(ServicioClientes servicio) : ControllerBa
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.EliminarAsync(id, cancellationToken);
+        return resultado.EsExitoso ? NoContent() : CrearProblema(resultado.Error!);
+    }
+
     private ObjectResult CrearProblema(ErrorDominio error)
     {
         var estado = error.Codigo switch
         {
             "cliente.no_encontrado" => StatusCodes.Status404NotFound,
+            "cliente.no_eliminable" => StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest
         };

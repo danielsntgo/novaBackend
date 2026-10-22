@@ -87,6 +87,21 @@ public sealed class ServicioEmpleados(IRepositorioEmpleados repositorio)
         return await GuardarYConvertirAsync(empleado, cancellationToken);
     }
 
+    public async Task<Resultado<bool>> EliminarAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var empleado = id == Guid.Empty ? null : await repositorio.ObtenerAsync(id, cancellationToken);
+        if (empleado is null)
+        {
+            return Resultado<bool>.Fallo(NoEncontrado());
+        }
+
+        repositorio.Eliminar(empleado);
+        return await repositorio.GuardarCambiosAsync(cancellationToken)
+            ? Resultado<bool>.Exito(true)
+            : Resultado<bool>.Fallo(new ErrorDominio(
+                "empleado.no_eliminable", "El empleado tiene citas, ventas, comisiones u otro historial asociado. Desactívalo para conservarlo."));
+    }
+
     public async Task<Resultado<IReadOnlyList<HorarioSemanalEmpleadoDto>>> ObtenerHorarioSemanalAsync(
         Guid id,
         CancellationToken cancellationToken)

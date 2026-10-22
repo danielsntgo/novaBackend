@@ -35,7 +35,8 @@ public sealed record MovimientoFinancieroDto(
     Guid? TransferenciaFinancieraId,
     Guid? UsuarioId,
     bool Migrado,
-    decimal SaldoPosterior);
+    decimal SaldoPosterior,
+    Guid? CompraId = null);
 
 public sealed record PaginaMovimientosFinancierosDto(
     IReadOnlyList<MovimientoFinancieroDto> Elementos,
@@ -55,7 +56,8 @@ public sealed record SolicitudCuentaFinanciera(
     string? Entidad,
     string? UltimosDigitos,
     decimal? CupoCredito,
-    decimal? SaldoInicial = null);
+    decimal? SaldoInicial = null,
+    Guid? MetodoPagoId = null);
 
 public sealed record SolicitudMovimientoMetodoPago(
     Guid MetodoPagoId,

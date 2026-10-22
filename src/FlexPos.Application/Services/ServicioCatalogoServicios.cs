@@ -106,6 +106,21 @@ public sealed class ServicioCatalogoServicios(
         return await GuardarYConvertirAsync(servicio, cancellationToken);
     }
 
+    public async Task<Resultado<bool>> EliminarAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var servicio = id == Guid.Empty ? null : await repositorio.ObtenerAsync(id, cancellationToken);
+        if (servicio is null)
+        {
+            return Resultado<bool>.Fallo(NoEncontrado());
+        }
+
+        repositorio.Eliminar(servicio);
+        return await repositorio.GuardarCambiosAsync(cancellationToken)
+            ? Resultado<bool>.Exito(true)
+            : Resultado<bool>.Fallo(new ErrorDominio(
+                "servicio.no_eliminable", "El servicio tiene ventas, citas o reglas de comisión asociadas. Desactívalo para conservarlo."));
+    }
+
     private async Task<Resultado<PaginaServiciosDto>> ListarInternoAsync(
         string? buscar,
         bool? activo,

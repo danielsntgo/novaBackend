@@ -75,6 +75,21 @@ public sealed class ServicioProveedores(IRepositorioProveedores repositorio)
         return await GuardarAsync(proveedor, cancellationToken);
     }
 
+    public async Task<Resultado<bool>> EliminarAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var proveedor = id == Guid.Empty ? null : await repositorio.ObtenerAsync(id, cancellationToken);
+        if (proveedor is null)
+        {
+            return Resultado<bool>.Fallo(NoEncontrado());
+        }
+
+        repositorio.Eliminar(proveedor);
+        return await repositorio.GuardarCambiosAsync(cancellationToken)
+            ? Resultado<bool>.Exito(true)
+            : Resultado<bool>.Fallo(new ErrorDominio(
+                "proveedor.no_eliminable", "El proveedor tiene compras u otro historial asociado. Desactívalo para conservarlo."));
+    }
+
     private async Task<Resultado<ProveedorDto>> GuardarAsync(
         Proveedor proveedor, CancellationToken cancellationToken)
     {

@@ -137,6 +137,8 @@ public sealed class MovimientoFinanciero : EntidadAuditable
                 !transferenciaFinancieraId.HasValue,
             TipoMovimientoFinanciero.PagoCompra =>
                 sentido == SentidoMovimientoFinanciero.Salida && tieneSoloMetodo && compraId.HasValue,
+            TipoMovimientoFinanciero.ReembolsoCompra =>
+                sentido == SentidoMovimientoFinanciero.Entrada && tieneSoloMetodo && compraId.HasValue,
             TipoMovimientoFinanciero.PagoComision =>
                 sentido == SentidoMovimientoFinanciero.Salida && metodoPagoId.HasValue &&
                 liquidacionComisionId.HasValue && !ventaId.HasValue && !devolucionVentaId.HasValue &&

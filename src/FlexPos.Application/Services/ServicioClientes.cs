@@ -85,6 +85,21 @@ public sealed class ServicioClientes(IRepositorioClientes repositorio)
         return await GuardarYConvertirAsync(cliente, cancellationToken);
     }
 
+    public async Task<Resultado<bool>> EliminarAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var cliente = id == Guid.Empty ? null : await repositorio.ObtenerAsync(id, cancellationToken);
+        if (cliente is null)
+        {
+            return Resultado<bool>.Fallo(NoEncontrado());
+        }
+
+        repositorio.Eliminar(cliente);
+        return await repositorio.GuardarCambiosAsync(cancellationToken)
+            ? Resultado<bool>.Exito(true)
+            : Resultado<bool>.Fallo(new ErrorDominio(
+                "cliente.no_eliminable", "El cliente tiene ventas u otro historial asociado. Desactívalo para conservarlo."));
+    }
+
     private async Task<Resultado<ClienteDto>> GuardarYConvertirAsync(
         Cliente cliente,
         CancellationToken cancellationToken)

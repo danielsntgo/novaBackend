@@ -136,11 +136,22 @@ public sealed class InventarioController(ServicioInventario servicio) : Controll
             solicitud.Categoria, solicitud.CantidadMinima, solicitud.PrecioVenta);
     }
 
+    [HttpDelete("articulos/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> EliminarArticulo(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.EliminarArticuloAsync(id, cancellationToken);
+        return resultado.EsExitoso ? NoContent() : CrearProblema(resultado.Error!);
+    }
+
     private ObjectResult CrearProblema(ErrorDominio error)
     {
         var estado = error.Codigo switch
         {
             "inventario.articulo_no_encontrado" => StatusCodes.Status404NotFound,
+            "inventario.articulo_no_eliminable" => StatusCodes.Status409Conflict,
             "inventario.conflicto" or "inventario.unidad_inmutable" or "inventario.tipo_inmutable" or
                 "inventario.stock_insuficiente" => StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) => StatusCodes.Status409Conflict,

@@ -10,6 +10,26 @@ public sealed record DetalleCompraDto(
     decimal TotalLinea,
     string CodigoMoneda);
 
+public sealed record DetalleDevolucionCompraDto(Guid DetalleCompraId, decimal Cantidad, decimal Importe);
+
+public sealed record PagoDevolucionCompraDto(
+    Guid MetodoPagoId,
+    string MetodoPagoNombre,
+    bool EsEfectivo,
+    Guid CuentaFinancieraId,
+    string CuentaFinancieraNombre,
+    decimal Importe,
+    string? Referencia);
+
+public sealed record DevolucionCompraDto(
+    Guid Id,
+    DateTimeOffset FechaUtc,
+    string Motivo,
+    decimal ImporteLineas,
+    decimal ImporteReintegrado,
+    IReadOnlyList<DetalleDevolucionCompraDto> Lineas,
+    IReadOnlyList<PagoDevolucionCompraDto> Pagos);
+
 public sealed record CompraDto(
     Guid Id,
     Guid ProveedorId,
@@ -21,7 +41,12 @@ public sealed record CompraDto(
     string Estado,
     DateTimeOffset? FechaConfirmacionUtc,
     decimal Total,
+    decimal TotalDevuelto,
+    decimal SaldoNeto,
+    string? MotivoAnulacion,
+    DateTimeOffset? FechaAnulacionUtc,
     IReadOnlyList<DetalleCompraDto> Detalles,
+    IReadOnlyList<DevolucionCompraDto> Devoluciones,
     DateTimeOffset FechaCreacionUtc,
     DateTimeOffset? FechaModificacionUtc);
 
@@ -39,3 +64,14 @@ public sealed record SolicitudCompra(
     string? Referencia,
     string? Observacion,
     IReadOnlyList<SolicitudLineaCompra> Detalles);
+
+public sealed record SolicitudDevolucionCompra(
+    string? Motivo,
+    IReadOnlyList<SolicitudLineaDevolucionCompra>? Lineas,
+    IReadOnlyList<SolicitudPagoCompra>? Pagos);
+
+public sealed record SolicitudLineaDevolucionCompra(Guid DetalleCompraId, decimal Cantidad);
+
+public sealed record SolicitudPagoCompra(Guid MetodoPagoId, decimal Importe, string? Referencia);
+
+public sealed record SolicitudAnularCompra(string? Motivo, IReadOnlyList<SolicitudPagoCompra>? Pagos);

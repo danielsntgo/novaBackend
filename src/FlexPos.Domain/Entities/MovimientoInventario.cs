@@ -61,7 +61,8 @@ public sealed class MovimientoInventario : EntidadAuditable
         Guid? ventaId = null,
         Guid? detalleVentaId = null)
     {
-        var referenciaCompraInvalida = tipo == TipoMovimientoInventario.EntradaCompra
+        var movimientoCompra = tipo is TipoMovimientoInventario.EntradaCompra or TipoMovimientoInventario.SalidaDevolucionCompra;
+        var referenciaCompraInvalida = movimientoCompra
             ? !compraId.HasValue || !detalleCompraId.HasValue
             : compraId.HasValue || detalleCompraId.HasValue;
         var movimientoVenta = tipo is TipoMovimientoInventario.SalidaVenta or TipoMovimientoInventario.EntradaDevolucion;

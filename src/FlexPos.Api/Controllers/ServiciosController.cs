@@ -95,6 +95,17 @@ public sealed class ServiciosController(ServicioCatalogoServicios servicio) : Co
         return resultado.EsExitoso ? Ok(resultado.Valor) : CrearProblema(resultado.Error!);
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = PoliticasAutorizacion.SoloAdministrador)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await servicio.EliminarAsync(id, cancellationToken);
+        return resultado.EsExitoso ? NoContent() : CrearProblema(resultado.Error!);
+    }
+
     private static SolicitudServicio Convertir(GuardarServicioRequest solicitud) => new(
         solicitud.Nombre, solicitud.Descripcion, solicitud.Categoria, solicitud.Precio, solicitud.DuracionMinutos);
 
@@ -103,6 +114,7 @@ public sealed class ServiciosController(ServicioCatalogoServicios servicio) : Co
         var estado = error.Codigo switch
         {
             "servicio.no_encontrado" => StatusCodes.Status404NotFound,
+            "servicio.no_eliminable" => StatusCodes.Status409Conflict,
             "configuracion.no_configurada" => StatusCodes.Status409Conflict,
             var codigo when codigo.EndsWith("conflicto", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest

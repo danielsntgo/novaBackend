@@ -3,5 +3,8 @@ namespace FlexPos.Domain.Enums;
 public enum EstadoCompra
 {
     Borrador,
-    Confirmada
+    Confirmada,
+    ParcialmenteDevuelta,
+    Devuelta,
+    Anulada
 }

@@ -9,7 +9,10 @@ public sealed class CompraConfiguration : IEntityTypeConfiguration<Compra>
     public void Configure(EntityTypeBuilder<Compra> builder)
     {
         builder.ToTable("compras", tabla =>
-            tabla.HasCheckConstraint("ck_compras_total", "total_importe >= 0"));
+        {
+            tabla.HasCheckConstraint("ck_compras_total", "total_importe >= 0");
+            tabla.HasCheckConstraint("ck_compras_total_devuelto", "total_devuelto >= 0 AND total_devuelto <= total_importe");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(x => x.ProveedorId).HasColumnName("proveedor_id");
@@ -19,8 +22,11 @@ public sealed class CompraConfiguration : IEntityTypeConfiguration<Compra>
         builder.Property(x => x.Observacion).HasColumnName("observacion").HasMaxLength(500);
         builder.Property(x => x.CodigoMoneda).HasColumnName("codigo_moneda").HasMaxLength(3).IsRequired();
         builder.Property(x => x.TotalImporte).HasColumnName("total_importe").HasPrecision(18, 2);
+        builder.Property(x => x.TotalDevuelto).HasColumnName("total_devuelto").HasPrecision(18, 2);
         builder.Property(x => x.Estado).HasColumnName("estado").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.FechaConfirmacionUtc).HasColumnName("fecha_confirmacion_utc").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.MotivoAnulacion).HasColumnName("motivo_anulacion").HasMaxLength(250);
+        builder.Property(x => x.FechaAnulacionUtc).HasColumnName("fecha_anulacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.FechaModificacionUtc).HasColumnName("fecha_modificacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.CreadoPorId).HasColumnName("creado_por_id");
@@ -29,6 +35,8 @@ public sealed class CompraConfiguration : IEntityTypeConfiguration<Compra>
         builder.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.ProveedorId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Detalles).WithOne(x => x.Compra).HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
         builder.Navigation(x => x.Detalles).HasField("_detalles").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Devoluciones).WithOne().HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(x => x.Devoluciones).HasField("_devoluciones").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.HasIndex(x => new { x.Estado, x.FechaCompraUtc }).HasDatabaseName("ix_compras_estado_fecha");
         builder.HasIndex(x => x.ProveedorId).HasDatabaseName("ix_compras_proveedor");
         builder.HasIndex(x => x.ReferenciaNormalizada).HasOperators("text_pattern_ops").HasDatabaseName("ix_compras_referencia_prefijo");

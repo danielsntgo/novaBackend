@@ -6,5 +6,6 @@ public enum TipoMovimientoInventario
     EntradaAjuste,
     SalidaAjuste,
     SalidaVenta,
-    EntradaDevolucion
+    EntradaDevolucion,
+    SalidaDevolucionCompra
 }

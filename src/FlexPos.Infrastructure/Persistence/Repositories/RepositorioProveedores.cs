@@ -35,6 +35,7 @@ public sealed class RepositorioProveedores(FlexPosDbContext contexto) : IReposit
     }
 
     public void Agregar(Proveedor proveedor) => contexto.Proveedores.Add(proveedor);
+    public void Eliminar(Proveedor proveedor) => contexto.Proveedores.Remove(proveedor);
 
     public async Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken)
     {
@@ -50,6 +51,12 @@ public sealed class RepositorioProveedores(FlexPosDbContext contexto) : IReposit
         }
         catch (DbUpdateException excepcion) when
             (excepcion.GetBaseException() is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            contexto.ChangeTracker.Clear();
+            return false;
+        }
+        catch (DbUpdateException excepcion) when
+            (excepcion.GetBaseException() is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
             contexto.ChangeTracker.Clear();
             return false;

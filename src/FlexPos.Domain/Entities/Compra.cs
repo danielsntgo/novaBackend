@@ -8,6 +8,7 @@ namespace FlexPos.Domain.Entities;
 public sealed class Compra : EntidadAuditable
 {
     private readonly List<DetalleCompra> _detalles = [];
+    private readonly List<DevolucionCompra> _devoluciones = [];
 
     private Compra()
     {
@@ -38,9 +39,14 @@ public sealed class Compra : EntidadAuditable
     public string? Observacion { get; private set; }
     public string CodigoMoneda { get; private set; } = string.Empty;
     public decimal TotalImporte { get; private set; }
+    public decimal TotalDevuelto { get; private set; }
+    public decimal SaldoNeto => Math.Max(0m, TotalImporte - TotalDevuelto);
     public EstadoCompra Estado { get; private set; }
     public DateTimeOffset? FechaConfirmacionUtc { get; private set; }
+    public string? MotivoAnulacion { get; private set; }
+    public DateTimeOffset? FechaAnulacionUtc { get; private set; }
     public IReadOnlyCollection<DetalleCompra> Detalles => _detalles;
+    public IReadOnlyCollection<DevolucionCompra> Devoluciones => _devoluciones.AsReadOnly();
 
     public static Resultado<Compra> Crear(
         Guid proveedorId,
@@ -148,6 +154,50 @@ public sealed class Compra : EntidadAuditable
 
         Estado = EstadoCompra.Confirmada;
         FechaConfirmacionUtc = fechaUtc.ToUniversalTime();
+        return Resultado<bool>.Exito(true);
+    }
+
+    public Resultado<bool> RegistrarDevolucion(
+        DevolucionCompra devolucion,
+        bool anular,
+        Guid usuarioId,
+        DateTimeOffset fechaUtc)
+    {
+        decimal totalDevuelto;
+        try
+        {
+            totalDevuelto = checked(TotalDevuelto + devolucion.ImporteLineas);
+        }
+        catch (OverflowException)
+        {
+            return Resultado<bool>.Fallo(new ErrorDominio(
+                "compra.devolucion_invalida", "El importe de la devolución excede el saldo de la compra."));
+        }
+
+        if (Estado is EstadoCompra.Borrador or EstadoCompra.Devuelta or EstadoCompra.Anulada ||
+            devolucion.CompraId != Id || devolucion.ImporteLineas < 0m ||
+            totalDevuelto > TotalImporte || usuarioId == Guid.Empty || fechaUtc == default ||
+            anular && string.IsNullOrWhiteSpace(devolucion.Motivo))
+        {
+            return Resultado<bool>.Fallo(new ErrorDominio(
+                "compra.devolucion_invalida", "La devolución no es válida para el estado, saldo o líneas de la compra."));
+        }
+
+        _devoluciones.Add(devolucion);
+        TotalDevuelto = totalDevuelto;
+        if (anular)
+        {
+            Estado = EstadoCompra.Anulada;
+            MotivoAnulacion = devolucion.Motivo.Trim();
+            FechaAnulacionUtc = fechaUtc.ToUniversalTime();
+        }
+        else
+        {
+            Estado = TotalDevuelto == TotalImporte
+                ? EstadoCompra.Devuelta
+                : EstadoCompra.ParcialmenteDevuelta;
+        }
+
         return Resultado<bool>.Exito(true);
     }
 

@@ -158,10 +158,31 @@ public sealed class ServicioFinanzas(
         }
 
         await using var unidad = await repositorio.IniciarTransaccionAsync(cancellationToken);
+        var metodoSeleccionado = solicitud.MetodoPagoId.HasValue
+            ? await unidad.BloquearMetodoPagoAsync(configuracion.Id, solicitud.MetodoPagoId.Value, cancellationToken)
+            : null;
+        if (solicitud.MetodoPagoId.HasValue &&
+            (metodoSeleccionado is null || !metodoSeleccionado.Activo ||
+             metodoSeleccionado.EsEfectivo != (tipo == TipoCuentaFinanciera.Efectivo)))
+        {
+            return Resultado<CuentaFinancieraDto>.Fallo(NoMetodoPago());
+        }
+
         unidad.Agregar(cuenta.Valor!);
         if (movimientoSaldoInicial is not null)
         {
             unidad.Agregar(movimientoSaldoInicial);
+        }
+
+        if (metodoSeleccionado is not null)
+        {
+            var asociacion = metodoSeleccionado.Actualizar(
+                metodoSeleccionado.Nombre, metodoSeleccionado.RequiereReferencia,
+                metodoSeleccionado.EsEfectivo, cuenta.Valor);
+            if (!asociacion.EsExitoso)
+            {
+                return Resultado<CuentaFinancieraDto>.Fallo(asociacion.Error!);
+            }
         }
 
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
@@ -299,6 +320,16 @@ public sealed class ServicioFinanzas(
             return Resultado<CuentaFinancieraDto>.Fallo(NoEncontrada());
         }
 
+        var metodoSeleccionado = solicitud.MetodoPagoId.HasValue
+            ? await unidad.BloquearMetodoPagoAsync(configuracion.Id, solicitud.MetodoPagoId.Value, cancellationToken)
+            : null;
+        if (solicitud.MetodoPagoId.HasValue &&
+            (metodoSeleccionado is null || !metodoSeleccionado.Activo ||
+             metodoSeleccionado.EsEfectivo != (tipo == TipoCuentaFinanciera.Efectivo)))
+        {
+            return Resultado<CuentaFinancieraDto>.Fallo(NoMetodoPago());
+        }
+
         var esCuentaBase =
             cuenta.Tipo == TipoCuentaFinanciera.Efectivo && cuenta.Nombre == CuentaEfectivoBase ||
             cuenta.Tipo == TipoCuentaFinanciera.Otro && cuenta.Nombre == CuentaAsignarBase;
@@ -323,6 +354,17 @@ public sealed class ServicioFinanzas(
         if (!actualizacion.EsExitoso)
         {
             return Resultado<CuentaFinancieraDto>.Fallo(actualizacion.Error!);
+        }
+
+        if (metodoSeleccionado is not null)
+        {
+            var asociacion = metodoSeleccionado.Actualizar(
+                metodoSeleccionado.Nombre, metodoSeleccionado.RequiereReferencia,
+                metodoSeleccionado.EsEfectivo, cuenta);
+            if (!asociacion.EsExitoso)
+            {
+                return Resultado<CuentaFinancieraDto>.Fallo(asociacion.Error!);
+            }
         }
 
         if (!await unidad.GuardarCambiosAsync(cancellationToken))
@@ -429,7 +471,7 @@ public sealed class ServicioFinanzas(
             configuracion.Id, null, true, null, 0, int.MaxValue, cancellationToken);
         var saldos = await repositorio.CalcularSaldosAsync(cuentas.Select(x => x.Id).ToArray(), cancellationToken);
         var disponible = cuentas.Where(x => x.Tipo is TipoCuentaFinanciera.Efectivo or TipoCuentaFinanciera.Banco or
-                                            TipoCuentaFinanciera.Billetera)
+                                            TipoCuentaFinanciera.Billetera or TipoCuentaFinanciera.Otro)
             .Sum(x => saldos.GetValueOrDefault(x.Id));
         var deuda = cuentas.Where(x => x.Tipo == TipoCuentaFinanciera.TarjetaCredito)
             .Sum(x => Math.Max(0m, -saldos.GetValueOrDefault(x.Id)));
@@ -590,7 +632,7 @@ public sealed class ServicioFinanzas(
         movimiento.CodigoMoneda, movimiento.Concepto, movimiento.FechaUtc, movimiento.CajaId,
         movimiento.MetodoPagoId, movimiento.VentaId, movimiento.DevolucionVentaId,
         movimiento.LiquidacionComisionId, movimiento.TransferenciaFinancieraId,
-        movimiento.CreadoPorId, movimiento.Migrado, saldoPosterior);
+        movimiento.CreadoPorId, movimiento.Migrado, saldoPosterior, movimiento.CompraId);
 
     private static TransferenciaFinancieraDto Convertir(
         TransferenciaFinanciera transferencia,

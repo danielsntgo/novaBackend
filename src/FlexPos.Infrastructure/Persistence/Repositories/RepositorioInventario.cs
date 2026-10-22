@@ -107,6 +107,7 @@ public sealed class RepositorioInventario(FlexPosDbContext contexto) : IReposito
         contexto.ArticulosInventario.AnyAsync(cancellationToken);
 
     public void AgregarArticulo(ArticuloInventario articulo) => contexto.ArticulosInventario.Add(articulo);
+    public void EliminarArticulo(ArticuloInventario articulo) => contexto.ArticulosInventario.Remove(articulo);
 
     public void AgregarMovimiento(MovimientoInventario movimiento) => contexto.MovimientosInventario.Add(movimiento);
 
@@ -124,6 +125,12 @@ public sealed class RepositorioInventario(FlexPosDbContext contexto) : IReposito
         }
         catch (DbUpdateException excepcion) when
             (excepcion.GetBaseException() is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            contexto.ChangeTracker.Clear();
+            return false;
+        }
+        catch (DbUpdateException excepcion) when
+            (excepcion.GetBaseException() is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
             contexto.ChangeTracker.Clear();
             return false;

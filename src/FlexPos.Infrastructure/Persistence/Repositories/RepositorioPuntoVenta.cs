@@ -299,11 +299,27 @@ public sealed class RepositorioPuntoVenta(FlexPosDbContext contexto) : IReposito
             return await ConsultaVenta(db.Ventas).SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public async Task<Compra?> BloquearCompraAsync(Guid id, CancellationToken cancellationToken)
+        {
+            await BloquearFilasAsync(
+                "SELECT id FROM flexpos.compras WHERE id = @id FOR UPDATE",
+                cancellationToken,
+                ("id", id));
+            return await db.Compras
+                .Include(x => x.Proveedor)
+                .Include(x => x.Detalles)
+                .Include(x => x.Devoluciones).ThenInclude(x => x.Detalles)
+                .Include(x => x.Devoluciones).ThenInclude(x => x.Pagos)
+                .AsSplitQuery()
+                .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
         public void Agregar(Caja caja) => db.Cajas.Add(caja);
         public void Agregar(Venta venta) => db.Ventas.Add(venta);
         public void Agregar(MovimientoFinanciero movimiento) => db.MovimientosFinancieros.Add(movimiento);
         public void Agregar(MovimientoInventario movimiento) => db.MovimientosInventario.Add(movimiento);
         public void Agregar(Comision comision) => db.Comisiones.Add(comision);
+        public void Agregar(DevolucionCompra devolucion) => db.Set<DevolucionCompra>().Add(devolucion);
 
         public async Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken)
         {

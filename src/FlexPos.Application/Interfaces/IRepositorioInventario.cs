@@ -27,6 +27,7 @@ public interface IRepositorioInventario
         CancellationToken cancellationToken);
     Task<bool> ExisteAlgunoAsync(CancellationToken cancellationToken);
     void AgregarArticulo(ArticuloInventario articulo);
+    void EliminarArticulo(ArticuloInventario articulo);
     void AgregarMovimiento(MovimientoInventario movimiento);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
 }

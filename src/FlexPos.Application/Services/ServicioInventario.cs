@@ -107,6 +107,21 @@ public sealed class ServicioInventario(
         return await GuardarArticuloAsync(articulo, cancellationToken);
     }
 
+    public async Task<Resultado<bool>> EliminarArticuloAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var articulo = id == Guid.Empty ? null : await repositorio.ObtenerArticuloAsync(id, cancellationToken);
+        if (articulo is null)
+        {
+            return Resultado<bool>.Fallo(NoEncontradoArticulo());
+        }
+
+        repositorio.EliminarArticulo(articulo);
+        return await repositorio.GuardarCambiosAsync(cancellationToken)
+            ? Resultado<bool>.Exito(true)
+            : Resultado<bool>.Fallo(new ErrorDominio(
+                "inventario.articulo_no_eliminable", "El artículo tiene compras, ventas o movimientos asociados. Desactívalo para conservar su historial."));
+    }
+
     public async Task<Resultado<MovimientoInventarioDto>> RegistrarEntradaAsync(
         Guid articuloId,
         SolicitudEntradaInventario solicitud,

@@ -31,20 +31,25 @@ public sealed partial class RepositorioReportes
                         compra.Referencia,
                         Estado = compra.Estado,
                         compra.TotalImporte,
+                        compra.TotalDevuelto,
+                        compra.SaldoNeto,
                         compra.CodigoMoneda,
                         Lineas = compra.Detalles.Count(x => x.Vigente)
                     };
 
         return CrearAsync(
             "compras", "Compras", filtros, filas,
-            ["CompraId", "FechaCompraUtc", "Proveedor", "Referencia", "Estado", "Lineas", "Total", "Moneda"],
+            ["CompraId", "FechaCompraUtc", "Proveedor", "Referencia", "Estado", "Lineas", "Total", "TotalDevuelto", "SaldoNeto", "Moneda"],
             x => Fila(("CompraId", x.Id), ("FechaCompraUtc", x.FechaCompraUtc), ("Proveedor", x.Proveedor),
                 ("Referencia", x.Referencia), ("Estado", x.Estado.ToString()), ("Lineas", x.Lineas),
-                ("Total", x.TotalImporte), ("Moneda", x.CodigoMoneda)),
+                ("Total", x.TotalImporte), ("TotalDevuelto", x.TotalDevuelto),
+                ("SaldoNeto", x.SaldoNeto), ("Moneda", x.CodigoMoneda)),
             elementos =>
             [
                 new TotalReporteDto("Compras", elementos.Count),
-                new TotalReporteDto("Importe", elementos.Sum(x => x.TotalImporte), elementos.FirstOrDefault()?.CodigoMoneda)
+                new TotalReporteDto("Importe", elementos.Sum(x => x.TotalImporte), elementos.FirstOrDefault()?.CodigoMoneda),
+                new TotalReporteDto("Devuelto", elementos.Sum(x => x.TotalDevuelto), elementos.FirstOrDefault()?.CodigoMoneda),
+                new TotalReporteDto("Saldo neto", elementos.Sum(x => x.SaldoNeto), elementos.FirstOrDefault()?.CodigoMoneda)
             ], cancellationToken);
     }
 
@@ -81,14 +86,15 @@ public sealed partial class RepositorioReportes
                 .Where(x => x.CajaId == caja.Id && x.Tipo == tipo && x.Sentido == sentido).Sum(x => x.Importe);
             var ingresosVentas = Importe(TipoMovimientoFinanciero.PagoVenta, SentidoMovimientoFinanciero.Entrada);
             var ingresosManuales = Importe(TipoMovimientoFinanciero.IngresoManual, SentidoMovimientoFinanciero.Entrada);
+            var reembolsosCompras = Importe(TipoMovimientoFinanciero.ReembolsoCompra, SentidoMovimientoFinanciero.Entrada);
             var reembolsos = Importe(TipoMovimientoFinanciero.Reembolso, SentidoMovimientoFinanciero.Salida);
             var egresosManuales = Importe(TipoMovimientoFinanciero.EgresoManual, SentidoMovimientoFinanciero.Salida);
             var pagoComisiones = Importe(TipoMovimientoFinanciero.PagoComision, SentidoMovimientoFinanciero.Salida);
             var efectivoEsperado = caja.EfectivoEsperadoCierre ??
-                caja.EfectivoApertura + ingresosVentas + ingresosManuales - reembolsos - egresosManuales - pagoComisiones;
+                caja.EfectivoApertura + ingresosVentas + ingresosManuales + reembolsosCompras - reembolsos - egresosManuales - pagoComisiones;
             return new FilaCaja(
                 caja.Id, caja.Estado.ToString(), caja.FechaAperturaUtc, caja.FechaCierreUtc,
-                caja.EfectivoApertura, ingresosVentas, ingresosManuales, reembolsos, egresosManuales,
+                caja.EfectivoApertura, ingresosVentas, ingresosManuales, reembolsosCompras, reembolsos, egresosManuales,
                 pagoComisiones, efectivoEsperado, caja.EfectivoContadoCierre,
                 caja.DiferenciaCierre, moneda);
         }).ToArray();
@@ -96,11 +102,12 @@ public sealed partial class RepositorioReportes
         return CrearDesdeLista(
             "caja", "Arqueos y movimientos de caja", filtros, total, filas,
             ["CajaId", "Estado", "AperturaUtc", "CierreUtc", "EfectivoInicial", "PagosVenta",
-             "IngresosManuales", "Reembolsos", "EgresosManuales", "PagoComisiones",
+             "IngresosManuales", "ReembolsosCompra", "Reembolsos", "EgresosManuales", "PagoComisiones",
              "EfectivoEsperado", "EfectivoContado", "Diferencia", "Moneda"],
             x => Fila(("CajaId", x.Id), ("Estado", x.Estado), ("AperturaUtc", x.AperturaUtc),
                 ("CierreUtc", x.CierreUtc), ("EfectivoInicial", x.EfectivoInicial),
                 ("PagosVenta", x.PagosVenta), ("IngresosManuales", x.IngresosManuales),
+                ("ReembolsosCompra", x.ReembolsosCompra),
                 ("Reembolsos", x.Reembolsos), ("EgresosManuales", x.EgresosManuales),
                 ("PagoComisiones", x.PagoComisiones), ("EfectivoEsperado", x.EfectivoEsperado),
                 ("EfectivoContado", x.EfectivoContado), ("Diferencia", x.Diferencia), ("Moneda", x.Moneda)),
@@ -336,6 +343,7 @@ public sealed partial class RepositorioReportes
         decimal EfectivoInicial,
         decimal PagosVenta,
         decimal IngresosManuales,
+        decimal ReembolsosCompra,
         decimal Reembolsos,
         decimal EgresosManuales,
         decimal PagoComisiones,

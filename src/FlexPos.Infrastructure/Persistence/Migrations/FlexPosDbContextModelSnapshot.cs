@@ -568,6 +568,10 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("estado");
 
+                    b.Property<DateTimeOffset?>("FechaAnulacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_anulacion_utc");
+
                     b.Property<DateTimeOffset>("FechaCompraUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_compra_utc");
@@ -588,6 +592,11 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("modificado_por_id");
 
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("motivo_anulacion");
+
                     b.Property<string>("Observacion")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -606,6 +615,11 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)")
                         .HasColumnName("referencia_normalizada");
+
+                    b.Property<decimal>("TotalDevuelto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_devuelto");
 
                     b.Property<decimal>("TotalImporte")
                         .HasPrecision(18, 2)
@@ -634,6 +648,8 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.ToTable("compras", "flexpos", t =>
                         {
                             t.HasCheckConstraint("ck_compras_total", "total_importe >= 0");
+
+                            t.HasCheckConstraint("ck_compras_total_devuelto", "total_devuelto >= 0 AND total_devuelto <= total_importe");
                         });
                 });
 
@@ -902,6 +918,46 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FlexPos.Domain.Entities.DetalleDevolucionCompra", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Cantidad")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("cantidad");
+
+                    b.Property<Guid>("DetalleCompraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("detalle_compra_id");
+
+                    b.Property<Guid>("DevolucionCompraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("devolucion_compra_id");
+
+                    b.Property<decimal>("Importe")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("importe");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DetalleCompraId");
+
+                    b.HasIndex("DevolucionCompraId", "DetalleCompraId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_detalles_devolucion_compra_linea");
+
+                    b.ToTable("detalles_devolucion_compra", "flexpos", t =>
+                        {
+                            t.HasCheckConstraint("ck_detalles_devolucion_compra_cantidad", "cantidad > 0");
+
+                            t.HasCheckConstraint("ck_detalles_devolucion_compra_importe", "importe >= 0");
+                        });
+                });
+
             modelBuilder.Entity("FlexPos.Domain.Entities.DetalleDevolucionVenta", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1062,6 +1118,69 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.ToTable("detalles_venta", "flexpos", t =>
                         {
                             t.HasCheckConstraint("ck_detalles_venta_cantidad", "cantidad > 0");
+                        });
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.DevolucionCompra", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("compra_id");
+
+                    b.Property<Guid?>("CreadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaModificacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion_utc");
+
+                    b.Property<DateTimeOffset>("FechaUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_utc");
+
+                    b.Property<decimal>("ImporteLineas")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("importe_lineas");
+
+                    b.Property<decimal>("ImporteReintegrado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("importe_reintegrado");
+
+                    b.Property<Guid?>("ModificadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modificado_por_id");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("motivo");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompraId", "FechaUtc", "Id")
+                        .HasDatabaseName("ix_devoluciones_compra_compra_fecha");
+
+                    b.ToTable("devoluciones_compra", "flexpos", t =>
+                        {
+                            t.HasCheckConstraint("ck_devoluciones_compra_importes", "importe_lineas >= 0 AND importe_reintegrado >= 0");
                         });
                 });
 
@@ -1877,6 +1996,87 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_numeraciones_documento_tipo");
 
                     b.ToTable("numeraciones_documento", "flexpos");
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.PagoDevolucionCompra", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CreadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_id");
+
+                    b.Property<Guid>("CuentaFinancieraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cuenta_financiera_id");
+
+                    b.Property<string>("CuentaFinancieraNombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("cuenta_financiera_nombre");
+
+                    b.Property<Guid>("DevolucionCompraId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("devolucion_compra_id");
+
+                    b.Property<bool>("EsEfectivo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_efectivo");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaModificacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion_utc");
+
+                    b.Property<decimal>("Importe")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("importe");
+
+                    b.Property<Guid>("MetodoPagoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("metodo_pago_id");
+
+                    b.Property<string>("MetodoPagoNombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("metodo_pago_nombre");
+
+                    b.Property<Guid?>("ModificadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modificado_por_id");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("referencia");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CuentaFinancieraId");
+
+                    b.HasIndex("DevolucionCompraId")
+                        .HasDatabaseName("ix_pagos_devolucion_compra_devolucion");
+
+                    b.HasIndex("MetodoPagoId");
+
+                    b.ToTable("pagos_devolucion_compra", "flexpos", t =>
+                        {
+                            t.HasCheckConstraint("ck_pagos_devolucion_compra_importe", "importe > 0");
+                        });
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.PagoDevolucionVenta", b =>
@@ -3071,6 +3271,21 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FlexPos.Domain.Entities.DetalleDevolucionCompra", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.DetalleCompra", null)
+                        .WithMany()
+                        .HasForeignKey("DetalleCompraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.DevolucionCompra", null)
+                        .WithMany("Detalles")
+                        .HasForeignKey("DevolucionCompraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FlexPos.Domain.Entities.DetalleDevolucionVenta", b =>
                 {
                     b.HasOne("FlexPos.Domain.Entities.DetalleVenta", null)
@@ -3106,6 +3321,15 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                     b.HasOne("FlexPos.Domain.Entities.Venta", null)
                         .WithMany("Detalles")
                         .HasForeignKey("VentaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.DevolucionCompra", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.Compra", null)
+                        .WithMany("Devoluciones")
+                        .HasForeignKey("CompraId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -3323,6 +3547,27 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FlexPos.Domain.Entities.PagoDevolucionCompra", b =>
+                {
+                    b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
+                        .WithMany()
+                        .HasForeignKey("CuentaFinancieraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.DevolucionCompra", null)
+                        .WithMany("Pagos")
+                        .HasForeignKey("DevolucionCompraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlexPos.Domain.Entities.MetodoPagoConfigurado", null)
+                        .WithMany()
+                        .HasForeignKey("MetodoPagoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FlexPos.Domain.Entities.PagoDevolucionVenta", b =>
                 {
                     b.HasOne("FlexPos.Domain.Entities.CuentaFinanciera", null)
@@ -3508,6 +3753,15 @@ namespace FlexPos.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("FlexPos.Domain.Entities.Compra", b =>
                 {
                     b.Navigation("Detalles");
+
+                    b.Navigation("Devoluciones");
+                });
+
+            modelBuilder.Entity("FlexPos.Domain.Entities.DevolucionCompra", b =>
+                {
+                    b.Navigation("Detalles");
+
+                    b.Navigation("Pagos");
                 });
 
             modelBuilder.Entity("FlexPos.Domain.Entities.DevolucionVenta", b =>

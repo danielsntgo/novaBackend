@@ -62,11 +62,13 @@ public interface IUnidadTrabajoPuntoVenta : IAsyncDisposable
         TipoDocumentoVenta tipo,
         CancellationToken cancellationToken);
     Task<Venta?> BloquearVentaAsync(Guid id, CancellationToken cancellationToken);
+    Task<Compra?> BloquearCompraAsync(Guid id, CancellationToken cancellationToken);
     void Agregar(Caja caja);
     void Agregar(Venta venta);
     void Agregar(MovimientoFinanciero movimiento);
     void Agregar(MovimientoInventario movimiento);
     void Agregar(Comision comision);
+    void Agregar(DevolucionCompra devolucion);
     Task<bool> GuardarCambiosAsync(CancellationToken cancellationToken);
     Task ConfirmarAsync(CancellationToken cancellationToken);
 }
